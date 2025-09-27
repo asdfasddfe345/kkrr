@@ -740,17 +740,26 @@ class PaymentService {
     } else if (normalizedCoupon === 'first500' && planId === 'lite_check') {
       discountAmount = Math.floor(originalPrice * 0.98);
       finalAmount = originalPrice - discountAmount;
+      appliedCoupon = 'first500';
     } else if (normalizedCoupon === 'worthyone' && planId === 'career_pro_max') {
       discountAmount = Math.floor(originalPrice * 0.5);
       finalAmount = originalPrice - discountAmount;
     } else if (normalizedCoupon === 'vnkr50%' && planId === 'career_pro_max') {
-      discountAmount = Math.floor(originalPrice * 0.5);
+      discountAmount = Math.floor(originalPrice * 0.5); // 50% off
       finalAmount = originalPrice - discountAmount;
       message = 'Vinayaka Chavithi Offer applied! 50% off!';
     } else if (normalizedCoupon === 'vnk50' && planId === 'career_pro_max') {
-      discountAmount = Math.floor(originalPrice * 0.5);
+      discountAmount = Math.floor(originalPrice * 0.5); // 50% off
       finalAmount = originalPrice - discountAmount;
       message = 'VNK50 coupon applied! 50% off!';
+    } else if (normalizedCoupon === 'full100' && planId === 'leader_plan') {
+      discountAmount = originalPrice; // 100% discount
+      finalAmount = 0;
+      message = 'FULL100 coupon applied! 100% off!';
+    } else if (normalizedCoupon === 'primoboost' && planId === 'kickstart_plan') {
+      discountAmount = Math.floor(originalPrice * 0.5); // 50% off
+      finalAmount = originalPrice - discountAmount;
+      message = 'PRIMOBOOST coupon applied! 50% off!';
     } else {
       return { couponApplied: null, discountAmount: 0, finalAmount: originalPrice, error: 'Invalid coupon code or not applicable to selected plan', isValid: false, message: 'Invalid coupon code or not applicable to selected plan' };
     }
