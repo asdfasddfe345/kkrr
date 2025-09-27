@@ -720,7 +720,7 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
                 <div className="w-48 bg-gray-200 rounded-full h-2 dark:bg-dark-300">
                   <div
                     className="bg-gradient-to-r from-neon-cyan-500 to-neon-purple-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: \`${((currentStep + 1) / steps.length) * 100}%` }}
+                    style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
                   />
                 </div>
               </div>
