@@ -205,10 +205,7 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
       onShowAlert('Missing Recipient Information', 'Please fill in all required recipient details.', 'warning');
       return;
     }
-    if (formData.messageType !== 'referral' && !formData.messagePurpose) {
-      onShowAlert('Missing Message Purpose', 'Please describe the purpose of your message.', 'warning');
-      return;
-    }
+    
     if (formData.messageType === 'referral' && !formData.referralContext) {
       onShowAlert('Missing Referral Context', 'Please provide context for the referral.', 'warning');
       return;
@@ -468,18 +465,6 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
           </div>
 
           <div className="space-y-6">
-            {formData.messageType !== 'referral' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Message Purpose *</label>
-                <textarea
-                  value={formData.messagePurpose}
-                  onChange={(e) => handleInputChange('messagePurpose', e.target.value)}
-                  placeholder="Why are you reaching out? What do you want to achieve?"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-24 resize-none transition-all dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100 dark:placeholder-gray-400 dark:focus:border-neon-cyan-400"
-                />
-              </div>
-            )}
-
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tone</label>
               <div className="flex rounded-xl gap-1 bg-gray-100 border border-gray-200 shadow-inner dark:bg-dark-200 dark:border-dark-300">
@@ -730,7 +715,7 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
                 <div className="w-48 bg-gray-200 rounded-full h-2 dark:bg-dark-300">
                   <div
                     className="bg-gradient-to-r from-neon-cyan-500 to-neon-purple-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: \`${((currentStep + 1) / steps.length) * 100}%` }}
+                    style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
                   />
                 </div>
               </div>
@@ -739,7 +724,7 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
                 <button
                   onClick={() => setCurrentStep(currentStep + 1)}
                   disabled={!validateCurrentStep()}
-                  className={\`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
+                  className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
                     !validateCurrentStep()
                       ? 'bg-gray-400 cursor-not-allowed text-white'
                       : 'bg-gradient-to-r from-neon-cyan-500 to-neon-blue-500 hover:from-neon-cyan-400 hover:to-neon-blue-400 text-white hover:shadow-neon-cyan transform hover:-translate-y-0.5'
@@ -752,7 +737,7 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
                 <button
                   onClick={handleGenerateMessage}
                   disabled={!validateCurrentStep() || isGenerating}
-                  className={\`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
+                  className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
                     !validateCurrentStep() || isGenerating
                       ? 'bg-gray-400 cursor-not-allowed text-white'
                       : 'bg-gradient-to-r from-neon-cyan-500 to-neon-purple-500 hover:from-neon-cyan-400 hover:to-neon-purple-400 text-white hover:shadow-neon-cyan transform hover:-translate-y-0.5'
