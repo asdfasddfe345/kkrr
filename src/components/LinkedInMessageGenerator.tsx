@@ -467,12 +467,12 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
           <div className="space-y-6">
             <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 px-2">Tone</label>
-         <div className="flex rounded-xl gap-1 bg-gray-100 border border-gray-200 shadow-inner dark:bg-dark-200 dark:border-dark-300 px-2">
+         <div className="flex rounded-xl gap-2 bg-gray-100 border border-gray-200 shadow-inner dark:bg-dark-200 dark:border-dark-300 p-1">
                 {(['professional', 'casual', 'friendly'] as MessageTone[]).map((tone) => (
                   <button
                     key={tone}
                     onClick={() => handleInputChange('tone', tone)}
-     className={`text-center py-3 ${formData.tone === tone ? 'px-4' : 'px-3'} rounded-lg font-medium transition-all duration-300 capitalize min-w-touch min-h-touch ${
+     className={`flex-1 flex items-center justify-center py-3 px-2 rounded-lg font-medium transition-all duration-300 capitalize min-w-touch min-h-touch ${
                        
                       formData.tone === tone
                         ? 'bg-white shadow-md text-blue-700 dark:bg-dark-100 dark:text-neon-cyan-400'
