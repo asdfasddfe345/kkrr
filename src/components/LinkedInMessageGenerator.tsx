@@ -80,8 +80,8 @@ const generateLinkedInMessage = async (formData: MessageForm): Promise<string[]>
     const jobInfo = formData.jobId ? ` (Job ID: ${formData.jobId})` : '';
     return [
       `Hi ${formData.recipientFirstName}, hope you're doing well! ${formData.senderName} suggested I reach out regarding the ${formData.recipientJobTitle}${jobInfo} at ${formData.recipientCompany}. ${formData.referralContext} I'd value a quick chat or a referral if appropriate—happy to share a tailored resume too. Thanks!`,
-      `Hello ${formData.recipientFirstName}, I'm contacting you on ${formData.senderName}'s recommendation about the ${formData.recipientJobTitle}${jobInfo} role at ${formData.recipientCompany}. ${formData.referralContext} My background aligns with ${formData.industry || 'this area'} and I’d appreciate your guidance or a referral if possible.`,
-      `Hi ${formData.recipientFirstName}, ${formData.senderName} pointed me to you for the ${formData.recipientJobTitle}${jobInfo} opening at ${formData.recipientCompany}. ${formData.referralContext} If there's a referral path, I’d be grateful—open to a 5–10 min chat at your convenience.`
+      `Hello ${formData.recipientFirstName}, I'm contacting you on ${formData.senderName}'s recommendation about the ${formData.recipientJobTitle}${jobInfo} role at ${formData.recipientCompany}. ${formData.referralContext} My background aligns with ${formData.industry || 'this area'} and I'd appreciate your guidance or a referral if possible.`,
+      `Hi ${formData.recipientFirstName}, ${formData.senderName} pointed me to you for the ${formData.recipientJobTitle}${jobInfo} opening at ${formData.recipientCompany}. ${formData.referralContext} If there's a referral path, I'd be grateful—open to a 5–10 min chat at your convenience.`
     ];
   }
 
@@ -89,8 +89,8 @@ const generateLinkedInMessage = async (formData: MessageForm): Promise<string[]>
   const purpose = formData.messagePurpose || 'connecting further';
   return [
     `Hi ${formData.recipientFirstName}, I came across your work at ${formData.recipientCompany} as ${formData.recipientJobTitle} and was impressed. I'm interested in ${purpose}. Would love to connect and learn from your experience in ${formData.industry || 'this space'}.`,
-    `Hello ${formData.recipientFirstName}, your role (${formData.recipientJobTitle} at ${formData.recipientCompany}) overlaps with my background. I’m exploring ${purpose} and think we share common interests. Open to connecting? — ${formData.senderName}`,
-    `Hey ${formData.recipientFirstName}, noticing your impact at ${formData.recipientCompany}, especially around ${formData.personalizedContext || 'recent projects'}. I’m reaching out about ${purpose}. Would love to connect and exchange notes. — ${formData.senderName}`
+    `Hello ${formData.recipientFirstName}, your role (${formData.recipientJobTitle} at ${formData.recipientCompany}) overlaps with my background. I'm exploring ${purpose} and think we share common interests. Open to connecting? — ${formData.senderName}`,
+    `Hey ${formData.recipientFirstName}, noticing your impact at ${formData.recipientCompany}, especially around ${formData.personalizedContext || 'recent projects'}. I'm reaching out about ${purpose}. Would love to connect and exchange notes. — ${formData.senderName}`
   ];
 };
 
@@ -133,6 +133,12 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
   // NEW STATE: To track if message generation was interrupted due to credit
   const [messageGenerationInterrupted, setMessageGenerationInterrupted] = useState(false);
 
+  const handleInputChange = (field: keyof MessageForm, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const validateCurrentStep = useCallback(() => {
+    switch (currentStep) {
       // Step 0 – picked a type
       case 0:
         return !!formData.messageType;
@@ -362,7 +368,7 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
         <div className="space-y-6">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              Tell us about the person you’re reaching out to
+              Tell us about the person you're reaching out to
             </h2>
             <p className="text-gray-600 dark:text-gray-300">
               {formData.messageType === 'referral'
@@ -634,10 +640,10 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
               </div>
 
               {/* Message cards */}
-                    className={`flex-1 text-center py-3 px-3 rounded-lg font-medium transition-all duration-300 capitalize ${
+              <div className="space-y-6">
                 {generatedMessages.map((message, index) => (
-                        ? 'bg-white shadow-md text-blue-700 dark:bg-dark-100 dark:text-neon-cyan-400'
-                        : 'text-gray-600 hover:text-blue-500 hover:bg-white/70 dark:text-gray-300 dark:hover:text-neon-cyan-400 dark:hover:bg-dark-100/70'
+                  <div
+                    key={index}
                     className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden dark:bg-dark-100 dark:border-dark-300 dark:shadow-dark-xl"
                   >
                     <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 border-b border-gray-200 dark:from-dark-200 dark:to-dark-300 dark:border-dark-400">
@@ -724,7 +730,7 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
                 <div className="w-48 bg-gray-200 rounded-full h-2 dark:bg-dark-300">
                   <div
                     className="bg-gradient-to-r from-neon-cyan-500 to-neon-purple-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+                    style={{ width: \`${((currentStep + 1) / steps.length) * 100}%` }}
                   />
                 </div>
               </div>
@@ -733,7 +739,7 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
                 <button
                   onClick={() => setCurrentStep(currentStep + 1)}
                   disabled={!validateCurrentStep()}
-                  className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
+                  className={\`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
                     !validateCurrentStep()
                       ? 'bg-gray-400 cursor-not-allowed text-white'
                       : 'bg-gradient-to-r from-neon-cyan-500 to-neon-blue-500 hover:from-neon-cyan-400 hover:to-neon-blue-400 text-white hover:shadow-neon-cyan transform hover:-translate-y-0.5'
@@ -746,7 +752,7 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
                 <button
                   onClick={handleGenerateMessage}
                   disabled={!validateCurrentStep() || isGenerating}
-                  className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
+                  className={\`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
                     !validateCurrentStep() || isGenerating
                       ? 'bg-gray-400 cursor-not-allowed text-white'
                       : 'bg-gradient-to-r from-neon-cyan-500 to-neon-purple-500 hover:from-neon-cyan-400 hover:to-neon-purple-400 text-white hover:shadow-neon-cyan transform hover:-translate-y-0.5'
