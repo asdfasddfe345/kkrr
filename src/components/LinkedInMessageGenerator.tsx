@@ -472,7 +472,8 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
                   <button
                     key={tone}
                     onClick={() => handleInputChange('tone', tone)}
-    className={`flex-1 text-center py-3 px-6 rounded-lg font-medium transition-all duration-300 capitalize min-w-touch min-h-touch ${                        formData.tone === tone
+     className={`flex-1 text-center py-3 px-6 rounded-lg font-medium transition-all duration-300 capitalize min-w-touch min-h-touch ${
+                       formData.tone === tone
                       formData.tone === tone
                         ? 'bg-white shadow-md text-blue-700 dark:bg-dark-100 dark:text-neon-cyan-400'
                         : 'text-gray-600 hover:text-blue-500 dark:text-gray-300 dark:hover:text-neon-cyan-400'
