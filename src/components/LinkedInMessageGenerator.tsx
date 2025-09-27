@@ -471,29 +471,39 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
         <div className="space-y-6">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Message Configuration</h2>
-            <p className="text-gray-600 dark:text-gray-300">Customize your message tone </p>
+            <p className="text-gray-600 dark:text-gray-300">Customize your message tone and purpose</p>
           </div>
 
           <div className="space-y-6">
-          
+            {formData.messageType !== 'referral' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Message Purpose *</label>
+                <textarea
+                  value={formData.messagePurpose}
+                  onChange={(e) => handleInputChange('messagePurpose', e.target.value)}
+                  placeholder="Why are you reaching out? What do you want to achieve?"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-24 resize-none transition-all dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100 dark:placeholder-gray-400 dark:focus:border-neon-cyan-400"
+                />
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tone</label>
-              <div className="flex flex-wrap justify-center gap-2 rounded-xl bg-gray-100 border border-gray-200 shadow-inner dark:bg-dark-200 dark:border-dark-300">
-  {(['professional', 'casual', 'friendly'] as MessageTone[]).map((tone) => (
-    <button
-      key={tone}
-      onClick={() => handleInputChange('tone', tone)}
-      className={`px-5 py-2 rounded-lg font-medium transition-all duration-300 capitalize whitespace-nowrap ${
-        formData.tone === tone
-          ? 'bg-blue-600 text-white shadow-md dark:bg-neon-cyan-500 dark:text-gray-900'
-          : 'text-gray-600 hover:text-blue-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-neon-cyan-400 dark:hover:bg-dark-300'
-      }`}
-    >
-      {tone}
-    </button>
-  ))}
-</div>
-
+              <div className="flex rounded-xl gap-1 bg-gray-100 border border-gray-200 shadow-inner dark:bg-dark-200 dark:border-dark-300">
+                {(['professional', 'casual', 'friendly'] as MessageTone[]).map((tone) => (
+                  <button
+                    key={tone}
+                    onClick={() => handleInputChange('tone', tone)}
+                    className={`flex-1 text-center py-2 px-2 rounded-lg font-medium transition-all duration-300 capitalize ${
+                      formData.tone === tone
+                        ? 'bg-white shadow-md text-blue-700 dark:bg-dark-100 dark:text-neon-cyan-400'
+                        : 'text-gray-600 hover:text-blue-500 dark:text-gray-300 dark:hover:text-neon-cyan-400'
+                    }`}
+                  >
+                    {tone}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {formData.messageType !== 'referral' && (
@@ -517,37 +527,24 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 text-gray-900 font-sans dark:from-dark-50 dark:to-dark-200 dark:text-gray-100 transition-colors duration-300">
       {/* Top Bar */}
       <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40 dark:bg-dark-50 dark:border-dark-300">
-  <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div className="flex items-center justify-between h-16">
-      
-      {/* Back button + heading grouped */}
-      <div className="flex items-center space-x-3">
-        <button
-          onClick={() => {
-            if (onNavigateBack) onNavigateBack();
-            else navigate('/');
-          }}
-          className="bg-gradient-to-r from-neon-cyan-500 to-neon-blue-500 text-white 
-                     hover:from-neon-cyan-400 hover:to-neon-blue-400 active:from-neon-cyan-600 active:to-neon-blue-600 
-                     shadow-md hover:shadow-neon-cyan rounded-xl inline-flex items-center 
-                     transition-all duration-200 
-                     py-2 px-3 sm:py-3 sm:px-5"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="hidden sm:block">Back to Home</span>
-        </button>
-
-        <h1 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Outreach Message Generator
-        </h1>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <button
+              onClick={() => {
+                // prefer prop if provided
+                if (onNavigateBack) onNavigateBack();
+                else navigate('/');
+              }}
+              className="mb-6 mt-5 bg-gradient-to-r from-neon-cyan-500 to-neon-blue-500 text-white hover:from-neon-cyan-400 hover:to-neon-blue-400 active:from-neon-cyan-600 active:to-neon-blue-600 shadow-md hover:shadow-neon-cyan py-3 px-5 rounded-xl inline-flex items-center space-x-2 transition-all duration-200"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="hidden sm:block">Back to Home</span>
+            </button>
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Outreach Message Generator</h1>
+            <div className="w-16" />
+          </div>
+        </div>
       </div>
-
-      {/* Right spacer */}
-      <div className="w-6 sm:w-16" />
-    </div>
-  </div>
-</div>
-
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto pb-24">
