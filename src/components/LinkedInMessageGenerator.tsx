@@ -468,17 +468,7 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
           </div>
 
           <div className="space-y-6">
-            {formData.messageType !== 'referral' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Message Purpose *</label>
-                <textarea
-                  value={formData.messagePurpose}
-                  onChange={(e) => handleInputChange('messagePurpose', e.target.value)}
-                  placeholder="Why are you reaching out? What do you want to achieve?"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-24 resize-none transition-all dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100 dark:placeholder-gray-400 dark:focus:border-neon-cyan-400"
-                />
-              </div>
-            )}
+         
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tone</label>
