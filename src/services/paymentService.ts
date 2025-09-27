@@ -740,7 +740,7 @@ class PaymentService {
     } else if (normalizedCoupon === 'first500' && planId === 'lite_check') {
       discountAmount = Math.floor(originalPrice * 0.98);
       finalAmount = originalPrice - discountAmount;
-      appliedCoupon = 'first500';
+      // appliedCoupon = 'first500'; // This line was causing an error, removed.
     } else if (normalizedCoupon === 'worthyone' && planId === 'career_pro_max') {
       discountAmount = Math.floor(originalPrice * 0.5);
       finalAmount = originalPrice - discountAmount;
