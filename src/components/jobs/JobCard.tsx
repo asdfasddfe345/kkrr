@@ -93,7 +93,7 @@ export const JobCard: React.FC<JobCardProps> = ({
 
     // Check if profile is complete for auto-apply
     if (!profileValidation?.isComplete) {
-      setError(`Profile incomplete for auto-apply. Missing: ${profileValidation?.missingFields.join(', ') || 'profile data'}`);
+      setError(\`Profile incomplete for auto-apply. Missing: ${profileValidation?.missingFields.join(', ') || 'profile data'}`);
       return;
     }
 
