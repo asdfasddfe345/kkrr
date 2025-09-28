@@ -20,11 +20,11 @@ import {
 } from 'lucide-react';
 import { JobListing, AutoApplyResult, OptimizedResume } from '../../types/jobs';
 import { jobsService } from '../../services/jobsService';
+// ... (other imports)
 import { autoApplyOrchestrator } from '../../services/autoApplyOrchestrator';
 import { profileResumeService } from '../../services/profileResumeService';
-
-
 import { useAuth } from '../../contexts/AuthContext';
+// ... (rest of the file)
 
 interface JobCardProps {
   job: JobListing;
