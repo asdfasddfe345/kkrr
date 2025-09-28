@@ -1,8 +1,8 @@
 // src/components/modals/AutoApplyProgressModal.tsx
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, CheckCircle, AlertCircle, Eye, Download, ExternalLink, Clock, Zap } from 'lucide-react';
-import { AutoApplyResponse } from '../types/autoApply';
-import { externalBrowserService } from '../services/externalBrowserService';
+import { AutoApplyResponse } from '../../types/autoApply';
+import { externalBrowserService } from '../../services/externalBrowserService';
 
 interface AutoApplyProgressModalProps {
   isOpen: boolean;

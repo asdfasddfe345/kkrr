@@ -4,6 +4,8 @@ import { JobListing, JobFilters, AutoApplyResult, ApplicationHistory, OptimizedR
 import { sampleJobs, fetchJobListings } from './sampleJobsData';
 import { ResumeData } from '../types/resume';
 import { exportToPDF } from '../utils/exportUtils';
+import { ResumeData } from '../types/resume';
+import { exportToPDF } from '../utils/exportUtils';
 
 class JobsService {
   // Get a single job listing by ID

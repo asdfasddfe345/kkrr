@@ -34,25 +34,31 @@ interface ExternalBrowserServicePayload {
     domain: string;
     experience: string;
     qualification: string;
+    applicationUrl: string;
   };
-  applicationMetadata: {
+  metadata: {
     userId: string;
     jobId: string;
     optimizedResumeId: string;
     timestamp: string;
+    userAgent?: string;
+    sessionId?: string;
   };
 }
 
 interface ExternalBrowserServiceResponse {
   success: boolean;
   message: string;
-  status: 'submitted' | 'failed';
+  status: 'submitted' | 'failed' | 'partial';
   screenshotUrl?: string;
   error?: string;
   formFieldsFilled?: {
     [fieldName: string]: string;
   };
   applicationConfirmationText?: string;
+  redirectUrl?: string;
+  processingTimeMs?: number;
+  browserLogs?: string[];
 }
 
 Deno.serve(async (req: Request) => {
@@ -163,8 +169,9 @@ Deno.serve(async (req: Request) => {
         domain: job.domain,
         experience: job.experience_required,
         qualification: job.qualification,
+        applicationUrl: job.application_link,
       },
-      applicationMetadata: {
+      metadata: {
         userId: user.id,
         jobId: jobId,
         optimizedResumeId: optimizedResumeId,
@@ -174,8 +181,9 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[${new Date().toISOString()}] Payload prepared for external browser service`)
 
-    // Call external headless browser service
+    // Get external browser service URL from environment
     const externalServiceUrl = Deno.env.get('EXTERNAL_BROWSER_SERVICE_URL')
+    const externalServiceApiKey = Deno.env.get('EXTERNAL_SERVICE_API_KEY')
     
     if (!externalServiceUrl) {
       console.warn('EXTERNAL_BROWSER_SERVICE_URL not configured, simulating auto-apply...')
@@ -241,15 +249,15 @@ Deno.serve(async (req: Request) => {
     try {
       console.log(`[${new Date().toISOString()}] Calling external browser service at: ${externalServiceUrl}`)
       
-      const externalResponse = await fetch(externalServiceUrl, {
+      const externalResponse = await fetch(`${externalServiceUrl}/auto-apply`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('EXTERNAL_SERVICE_API_KEY') || 'fallback-key'}`,
+          'Authorization': `Bearer ${externalServiceApiKey || 'fallback-key'}`,
           'X-Origin': 'primoboost-ai',
         },
         body: JSON.stringify(externalServicePayload),
-        signal: AbortSignal.timeout(120000), // 2 minute timeout for browser automation
+        signal: AbortSignal.timeout(180000), // 3 minute timeout for browser automation
       })
 
       if (!externalResponse.ok) {
@@ -315,7 +323,7 @@ Deno.serve(async (req: Request) => {
           status: 'failed',
           error: externalError.message,
           fallbackUrl: job.application_link,
-          resumeUrl: optimizedResume.pdf_url
+          resumeUrl: optimized_resume.pdf_url
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -22,6 +22,7 @@ import { JobCard } from '../jobs/JobCard';
 import { JobFilters as JobFiltersComponent } from '../jobs/JobFilters';
 import { OptimizedResumePreviewModal } from '../modals/OptimizedResumePreviewModal';
 import { ApplicationConfirmationModal } from '../modals/ApplicationConfirmationModal';
+import { AutoApplyProgressModal } from '../modals/AutoApplyProgressModal';
 
 interface JobsPageProps {
   isAuthenticated: boolean;
@@ -49,6 +50,8 @@ export const JobsPage: React.FC<JobsPageProps> = ({
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const [selectedResume, setSelectedResume] = useState<OptimizedResume | null>(null);
   const [applicationResult, setApplicationResult] = useState<AutoApplyResult | null>(null);
+  const [showAutoApplyProgress, setShowAutoApplyProgress] = useState(false);
+  const [autoApplyApplicationId, setAutoApplyApplicationId] = useState<string | null>(null);
 
   const pageSize = 12;
 
@@ -100,7 +103,15 @@ export const JobsPage: React.FC<JobsPageProps> = ({
   const handleAutoApply = (job: JobListing, result: AutoApplyResult) => {
     setSelectedJob(job);
     setApplicationResult(result);
-    setShowApplicationConfirmation(true);
+    
+    // If the auto-apply is still in progress, show progress modal
+    if (result.status === 'pending' && result.applicationId) {
+      setAutoApplyApplicationId(result.applicationId);
+      setShowAutoApplyProgress(true);
+    } else {
+      // If completed (success or failure), show confirmation modal
+      setShowApplicationConfirmation(true);
+    }
   };
 
   const handleResumePreviewConfirm = () => {
@@ -293,6 +304,19 @@ export const JobsPage: React.FC<JobsPageProps> = ({
         onClose={() => setShowApplicationConfirmation(false)}
         job={selectedJob}
         result={applicationResult}
+      />
+
+      <AutoApplyProgressModal
+        isOpen={showAutoApplyProgress}
+        onClose={() => setShowAutoApplyProgress(false)}
+        applicationId={autoApplyApplicationId}
+        jobTitle={selectedJob?.role_title || ''}
+        companyName={selectedJob?.company_name || ''}
+        onComplete={(result) => {
+          setShowAutoApplyProgress(false);
+          setApplicationResult(result);
+          setShowApplicationConfirmation(true);
+        }}
       />
     </div>
   );

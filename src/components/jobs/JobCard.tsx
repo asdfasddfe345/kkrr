@@ -22,6 +22,8 @@ import { JobListing, AutoApplyResult, OptimizedResume } from '../../types/jobs';
 import { jobsService } from '../../services/jobsService';
 import { autoApplyOrchestrator } from '../../services/autoApplyOrchestrator';
 import { profileResumeService } from '../../services/profileResumeService';
+import { autoApplyOrchestrator } from '../../services/autoApplyOrchestrator';
+import { profileResumeService } from '../../services/profileResumeService';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface JobCardProps {
@@ -64,6 +66,26 @@ export const JobCard: React.FC<JobCardProps> = ({
     
     checkProfile();
   }, [isAuthenticated, user]);
+  const [profileValidation, setProfileValidation] = useState<{
+    isComplete: boolean;
+    missingFields: string[];
+  } | null>(null);
+
+  // Check profile completeness when component mounts (if authenticated)
+  useEffect(() => {
+    const checkProfile = async () => {
+      if (isAuthenticated && user) {
+        try {
+          const validation = await profileResumeService.isProfileCompleteForAutoApply(user.id);
+          setProfileValidation(validation);
+        } catch (err) {
+          console.error('Error checking profile completeness:', err);
+        }
+      }
+    };
+    
+    checkProfile();
+  }, [isAuthenticated, user]);
 
   const handleOptimizeResume = async () => {
     if (!isAuthenticated) {
@@ -85,16 +107,43 @@ export const JobCard: React.FC<JobCardProps> = ({
   };
 
   const handleManualApply = async () => {
-    if (!optimizedResume) {
-      await handleOptimizeResume();
+    if (!isAuthenticated || !user) {
+      onShowAuth();
       return;
     }
 
+    // Check if profile is complete for auto-apply
+    if (!profileValidation?.isComplete) {
+      setError(`Profile incomplete for auto-apply. Missing: ${profileValidation?.missingFields.join(', ') || 'profile data'}`);
+      return;
+    }
+
+    setIsAutoApplying(true);
+    setError(null);
+
     try {
-      await jobsService.logManualApplication(job.id, optimizedResume.id, job.application_link);
-      onManualApply(job, optimizedResume);
+      // Determine user type from profile
+      const userType = await autoApplyOrchestrator.getUserTypeFromProfile(user.id);
+      
+      console.log('JobCard: Starting intelligent auto-apply process...');
+      
+      // Use the orchestrator for the complete auto-apply flow
+      const orchestrationResult = await autoApplyOrchestrator.initiateAutoApply({
+        jobId: job.id,
+        userType: userType,
+        userId: user.id
+      });
+
+      if (orchestrationResult.success && orchestrationResult.applicationResult) {
+        onAutoApply(job, orchestrationResult.applicationResult);
+      } else {
+        throw new Error(orchestrationResult.error || 'Auto-apply orchestration failed');
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to initiate manual apply');
+      console.error('Auto-apply failed:', err);
+      setError(err instanceof Error ? err.message : 'Auto-apply failed');
+    } finally {
+      setIsAutoApplying(false);
     }
   };
 
@@ -324,6 +373,16 @@ export const JobCard: React.FC<JobCardProps> = ({
         </div>
         
         {/* Profile Completion Warning */}
+        {isAuthenticated && profileValidation && !profileValidation.isComplete && (
+          <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg dark:bg-orange-900/20 dark:border-orange-500/50">
+            <div className="flex items-center text-orange-700 dark:text-orange-300">
+              <AlertCircle className="w-4 h-4 mr-2" />
+              <span className="text-xs">
+                Complete your profile to enable auto-apply: {profileValidation.missingFields.join(', ')}
+              </span>
+            </div>
+          </div>
+        )}
         {isAuthenticated && profileValidation && !profileValidation.isComplete && (
           <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg dark:bg-orange-900/20 dark:border-orange-500/50">
             <div className="flex items-center text-orange-700 dark:text-orange-300">
