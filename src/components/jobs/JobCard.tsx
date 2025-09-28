@@ -103,7 +103,7 @@ export const JobCard: React.FC<JobCardProps> = ({
 
     // Check if profile is complete for auto-apply
     if (!profileValidation?.isComplete) {
-      setError(\`Profile incomplete for auto-apply. Missing: ${profileValidation?.missingFields.join(', ') || 'profile data'}`);
+      setError(`Profile incomplete for auto-apply. Missing: ${profileValidation?.missingFields.join(', ') || 'profile data'}`);
       return;
     }
 
@@ -175,7 +175,7 @@ export const JobCard: React.FC<JobCardProps> = ({
       formattedAmount = amount.toString();
     }
 
-    return \`₹${formattedAmount} ${job.package_type}`;
+    return `₹${formattedAmount} ${job.package_type}`;
   };
 
   return (
@@ -193,7 +193,7 @@ export const JobCard: React.FC<JobCardProps> = ({
             {job.company_logo_url ? (
               <img
                 src={job.company_logo_url}
-                alt={\`${job.company_name} logo`}
+                alt={`${job.company_name} logo`}
                 className="w-12 h-12 rounded-lg object-cover"
               />
             ) : (
