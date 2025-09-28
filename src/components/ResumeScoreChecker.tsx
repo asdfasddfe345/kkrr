@@ -500,33 +500,7 @@ if (hasScoreCheckCredits) {
                       </div>
                     )}
 
-                    {(scoringMode === 'general' || scoringMode === 'jd_based') && (
-                      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden dark:bg-dark-100 dark:border-dark-300 dark:shadow-dark-xl">
-                        <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 border-b border-gray-200 dark:from-dark-200 dark:to-dark-300 dark:border-dark-400">
-                          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                            <Target className="w-5 h-5 mr-2 text-green-600 dark:text-neon-blue-400" />
-                            Job Description {scoringMode === 'jd_based' ? '*' : '(Optional)'}
-                          </h2>
-                          <p className="text-gray-600 dark:text-gray-300 mt-1">
-                            {scoringMode === 'jd_based'
-                              ? 'Paste the complete job description for targeted analysis'
-                              : 'Add a job description for more specific analysis. If left empty, we\'ll use general industry standards.'
-                            }
-                          </p>
-                        </div>
-                        <div className="p-6">
-                          <textarea
-                            value={jobDescription}
-                            onChange={(e) => setJobDescription(e.target.value)}
-                            placeholder={scoringMode === 'jd_based'
-                              ? "Paste the complete job description here including requirements, responsibilities, and qualifications..."
-                              : "Paste the job description here for more specific analysis. If left empty, we'll use general industry standards."
-                            }
-                            className="w-full h-32 p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-neon-cyan-500 focus:border-neon-cyan-500 resize-none dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                          />
-                        </div>
-                      </div>
-                    )}
+                    {/* Removed Job Description Section */}
 
                     <div className="text-center">
                       <button
