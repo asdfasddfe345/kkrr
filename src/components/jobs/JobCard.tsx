@@ -23,7 +23,7 @@ import { jobsService } from '../../services/jobsService';
 import { autoApplyOrchestrator } from '../../services/autoApplyOrchestrator';
 import { profileResumeService } from '../../services/profileResumeService';
 import { autoApplyOrchestrator } from '../../services/autoApplyOrchestrator';
-import { profileResumeService } from '../../services/profileResumeService';
+
 import { useAuth } from '../../contexts/AuthContext';
 
 interface JobCardProps {
