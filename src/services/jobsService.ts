@@ -1,6 +1,7 @@
 // src/services/jobsService.ts
 import { supabase } from '../lib/supabaseClient';
 import { JobListing, JobFilters, AutoApplyResult, ApplicationHistory, OptimizedResume } from '../types/jobs';
+import { sampleJobs, fetchJobListings } from './sampleJobsData';
 
 class JobsService {
   // Fetch job listings with filters
@@ -10,6 +11,12 @@ class JobsService {
     hasMore: boolean;
   }> {
     try {
+      // For demo purposes, use sample data
+      // In production, this would call the Edge Function
+      const result = await fetchJobListings(filters, limit, offset);
+      return result;
+
+      /* Production code (uncomment when Edge Function is ready):
       const params = new URLSearchParams({
         limit: limit.toString(),
         offset: offset.toString(),
@@ -44,6 +51,7 @@ class JobsService {
         total: data.total || 0,
         hasMore: data.pagination?.hasMore || false
       };
+      */
     } catch (error) {
       console.error('Error fetching job listings:', error);
       throw new Error('Failed to fetch job listings');
@@ -254,10 +262,11 @@ class JobsService {
       };
     } catch (error) {
       console.error('Error getting filter options:', error);
+      // Return sample filter options for demo
       return {
-        domains: [],
-        locationTypes: [],
-        experienceLevels: [],
+        domains: ['SDE', 'Data Science', 'Product', 'Marketing', 'Analytics'],
+        locationTypes: ['Remote', 'Onsite', 'Hybrid'],
+        experienceLevels: ['0-1 years', '0-2 years', '1-2 years', '1-3 years', '2-4 years', '3-5 years'],
         packageRanges: { min: 0, max: 1000000 }
       };
     }
