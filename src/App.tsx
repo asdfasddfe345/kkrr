@@ -24,6 +24,8 @@ import { PricingPage } from './components/pages/PricingPage';
 import { OfferOverlay } from './components/OfferOverlay';
 import { CareersPage } from './components/pages/CareersPage';
 import { JobDetailsPage } from './components/pages/JobDetailsPage'; // Import JobDetailsPage
+import { JobsPage } from './components/pages/JobsPage'; // Import JobsPage
+import { MyApplicationsPage } from './components/pages/MyApplicationsPage'; // Import MyApplicationsPage
 
 function App() {
   const { isAuthenticated, user, markProfilePromptSeen, isLoading } = useAuth();
@@ -420,6 +422,8 @@ function App() {
         <Route path="/pricing" element={<PricingPage onShowAuth={handleShowAuth} onShowSubscriptionPlans={handleShowPlanSelection} />} />
         <Route path="/careers" element={<CareersPage {...commonPageProps} />} />
         <Route path="/careers/:jobId" element={<JobDetailsPage {...commonPageProps} />} /> {/* NEW ROUTE */}
+        <Route path="/jobs" element={<JobsPage {...commonPageProps} />} /> {/* NEW ROUTE */}
+        <Route path="/jobs/applications" element={<MyApplicationsPage {...commonPageProps} />} /> {/* NEW ROUTE */}
       </Routes>
 
       {showMobileMenu && (
@@ -478,9 +482,11 @@ function App() {
                   onShowProfile={handleShowProfile}
                 />
               </div>
+                  { id: '/jobs', label: 'Explore Jobs', icon: <Briefcase className="w-5 h-5" /> }, // ADDED: Jobs link
 
               <div className="mt-auto pt-4 border-t border-secondary-200 dark:border-dark-300">
                 <div className="bg-gradient-to-r from-primary-50 to-accent-50 rounded-xl p-4 dark:from-dark-200 dark:to-dark-300">
+                  ...(isAuthenticated ? [{ id: '/jobs/applications', label: 'My Applications', icon: <FileText className="w-5 h-5" /> }] : []), // ADDED: Applications link
                   <p className="text-sm text-secondary-700 mb-2 dark:text-gray-300">Need help with your resume?</p>
                   <button
                     onClick={() => {

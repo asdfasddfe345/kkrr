@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Info, BookOpen, Phone, Menu, Wallet, User, Briefcase } from 'lucide-react';
+import { Home, Info, BookOpen, Phone, Menu, Wallet, User, Briefcase, FileText } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
 import { Link } from 'react-router-dom'; // Import Link
 
@@ -16,11 +16,13 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({ currentPage, onPageC
     { id: '/', label: 'Home', icon: <Home className="w-5 h-5" /> }, // Changed id to path
     { id: '/about', label: 'About', icon: <Info className="w-5 h-5" /> }, // Changed id to path
     { id: '/careers', label: 'Careers', icon: <Briefcase className="w-5 h-5" /> }, // Added careers to mobile nav
+    { id: '/jobs', label: 'Jobs', icon: <Briefcase className="w-5 h-5" /> }, // Added jobs to mobile nav
     { id: '/tutorials', label: 'Tutorials', icon: <BookOpen className="w-5 h-5" /> }, // Changed id to path
     { id: '/contact', label: 'Contact', icon: <Phone className="w-5 h-5" /> }, // Changed id to path
     // Conditionally render the 'profile' and 'wallet' items if isAuthenticated is true
     ...(isAuthenticated ? [{ id: 'profile', label: 'Profile', icon: <User className="w-5 h-5" /> }] : []),
     ...(isAuthenticated ? [{ id: 'wallet', label: 'Wallet', icon: <Wallet className="w-5 h-5" /> }] : []),
+    ...(isAuthenticated ? [{ id: '/jobs/applications', label: 'Applications', icon: <FileText className="w-5 h-5" /> }] : []), // Added applications to mobile nav
     { id: 'menu', label: 'Menu', icon: <Menu className="w-5 h-5" /> }
   ];
 

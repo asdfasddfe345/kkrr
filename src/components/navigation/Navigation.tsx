@@ -1,6 +1,6 @@
 // src/components/navigation/Navigation.tsx
 import React, { useState } from 'react';
-import { Home, Info, Phone, BookOpen, MessageCircle, ChevronDown, Target, TrendingUp, PlusCircle, Zap, Sparkles, Crown, Users } from 'lucide-react'; // ADD Users for careers icon
+import { Home, Info, Phone, BookOpen, MessageCircle, ChevronDown, Target, TrendingUp, PlusCircle, Zap, Sparkles, Crown, Users, Briefcase, FileText } from 'lucide-react'; // ADD Briefcase and FileText for jobs
 import { useAuth } from '../../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom'; // Import Link and useNavigate
 
@@ -19,8 +19,10 @@ export const Navigation: React.FC<NavigationProps> = ({ onPageChange }) => { // 
    
     { id: '/about', label: 'About Us', icon: <Info className="w-4 h-4" /> }, // MODIFIED: id to path
     { id: '/careers', label: 'Careers', icon: <Users className="w-4 h-4" /> }, // ADDED: careers link
+    { id: '/jobs', label: 'Explore Jobs', icon: <Briefcase className="w-4 h-4" /> }, // ADDED: jobs link
     { id: '/tutorials', label: 'Tutorials', icon: <BookOpen className="w-4 h-4" /> }, // MODIFIED: id to path
     { id: '/contact', label: 'Contact', icon: <Phone className="w-4 h-4" /> }, // MODIFIED: id to path
+    ...(isAuthenticated ? [{ id: '/jobs/applications', label: 'My Applications', icon: <FileText className="w-4 h-4" /> }] : []), // ADDED: applications link
   ];
 
   const aiTools = [
