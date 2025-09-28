@@ -66,7 +66,7 @@ export const JobCard: React.FC<JobCardProps> = ({
     checkProfile();
   }, [isAuthenticated, user]);
 
-  const handleOptimizeResume = async () => {
+  const handleManualApplyClick = async () => {
     if (!isAuthenticated) {
       onShowAuth();
       return;
@@ -76,16 +76,26 @@ export const JobCard: React.FC<JobCardProps> = ({
     setError(null);
 
     try {
-      const resume = await jobsService.optimizeResumeForJob(job.id);
-      setOptimizedResume(resume);
+      let currentOptimizedResume = optimizedResume;
+      if (!currentOptimizedResume) {
+        // If resume not yet optimized, do it now
+        currentOptimizedResume = await jobsService.optimizeResumeForJob(job.id);
+        setOptimizedResume(currentOptimizedResume);
+      }
+      
+      if (currentOptimizedResume) {
+        onManualApply(job, currentOptimizedResume);
+      } else {
+        throw new Error('Failed to get optimized resume for manual apply.');
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to optimize resume');
+      setError(err instanceof Error ? err.message : 'Failed to optimize resume for manual apply');
     } finally {
       setIsOptimizing(false);
     }
   };
 
-  const handleManualApply = async () => {
+  const handleAutoApplyClick = async () => {
     if (!isAuthenticated || !user) {
       onShowAuth();
       return;
@@ -93,48 +103,7 @@ export const JobCard: React.FC<JobCardProps> = ({
 
     // Check if profile is complete for auto-apply
     if (!profileValidation?.isComplete) {
-      setError(\`Profile incomplete for auto-apply. Missing: ${profileValidation?.missingFields.join(', ') || 'profile data'}`);
-      return;
-    }
-
-    setIsAutoApplying(true);
-    setError(null);
-
-    try {
-      // Determine user type from profile
-      const userType = await autoApplyOrchestrator.getUserTypeFromProfile(user.id);
-      
-      console.log('JobCard: Starting intelligent auto-apply process...');
-      
-      // Use the orchestrator for the complete auto-apply flow
-      const orchestrationResult = await autoApplyOrchestrator.initiateAutoApply({
-        jobId: job.id,
-        userType: userType,
-        userId: user.id
-      });
-
-      if (orchestrationResult.success && orchestrationResult.applicationResult) {
-        onAutoApply(job, orchestrationResult.applicationResult);
-      } else {
-        throw new Error(orchestrationResult.error || 'Auto-apply orchestration failed');
-      }
-    } catch (err) {
-      console.error('Auto-apply failed:', err);
-      setError(err instanceof Error ? err.message : 'Auto-apply failed');
-    } finally {
-      setIsAutoApplying(false);
-    }
-  };
-
-  const handleAutoApply = async () => {
-    if (!isAuthenticated || !user) {
-      onShowAuth();
-      return;
-    }
-
-    // Check if profile is complete for auto-apply
-    if (!profileValidation?.isComplete) {
-      setError(\`Profile incomplete for auto-apply. Missing: ${profileValidation?.missingFields.join(', ') || 'profile data'}`);
+      setError(`Profile incomplete for auto-apply. Missing: ${profileValidation?.missingFields.join(', ') || 'profile data'}`);
       return;
     }
 
@@ -199,14 +168,14 @@ export const JobCard: React.FC<JobCardProps> = ({
     let formattedAmount = '';
     
     if (amount >= 100000) {
-      formattedAmount = \`${(amount / 100000).toFixed(1)}L`;
+      formattedAmount = `${(amount / 100000).toFixed(1)}L`;
     } else if (amount >= 1000) {
-      formattedAmount = \`${(amount / 1000).toFixed(0)}K`;
+      formattedAmount = `${(amount / 1000).toFixed(0)}K`;
     } else {
       formattedAmount = amount.toString();
     }
 
-    return \`₹${formattedAmount} ${job.package_type}`;
+    return `₹${formattedAmount} ${job.package_type}`;
   };
 
   return (
@@ -224,7 +193,7 @@ export const JobCard: React.FC<JobCardProps> = ({
             {job.company_logo_url ? (
               <img
                 src={job.company_logo_url}
-                alt={\`${job.company_name} logo`}
+                alt={`${job.company_name} logo`}
                 className="w-12 h-12 rounded-lg object-cover"
               />
             ) : (
@@ -249,7 +218,7 @@ export const JobCard: React.FC<JobCardProps> = ({
         </div>
 
         <div className="flex flex-wrap gap-2 mb-4">
-          <span className={\`px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${getDomainColor(job.domain)} text-white`}>
+          <span className={`px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${getDomainColor(job.domain)} text-white`}>
             {job.domain}
           </span>
           <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium flex items-center dark:bg-blue-900/20 dark:text-blue-300">
@@ -303,9 +272,9 @@ export const JobCard: React.FC<JobCardProps> = ({
 
         <div className="flex space-x-3">
           <button
-            onClick={handleManualApply}
+            onClick={handleManualApplyClick}
             disabled={isOptimizing}
-            className={\`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
+            className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
               isOptimizing
                 ? 'bg-gray-400 text-white cursor-not-allowed'
                 : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl'
@@ -325,9 +294,9 @@ export const JobCard: React.FC<JobCardProps> = ({
           </button>
 
           <button
-            onClick={handleAutoApply}
+            onClick={handleAutoApplyClick}
             disabled={isOptimizing || isAutoApplying || (isAuthenticated && !profileValidation?.isComplete)}
-            className={\`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
+            className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
               isOptimizing || isAutoApplying || (isAuthenticated && !profileValidation?.isComplete)
                 ? 'bg-gray-400 text-white cursor-not-allowed'
                 : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl'
