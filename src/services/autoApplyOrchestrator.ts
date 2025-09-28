@@ -246,4 +246,3 @@ class AutoApplyOrchestrator {
 
 export const autoApplyOrchestrator = new AutoApplyOrchestrator();
 
-export { autoApplyOrchestrator }
