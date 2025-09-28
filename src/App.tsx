@@ -62,6 +62,9 @@ function App() {
   // MODIFIED LINE 70: Renamed showVinayakaOffer to showWelcomeOffer
   const [showWelcomeOffer, setShowWelcomeOffer] = useState(false);
 
+  // NEW STATE: To track if message generation was interrupted due to credit
+  const [messageGenerationInterrupted, setMessageGenerationInterrupted] = useState(false);
+
   // NEW STATE: Callback to execute after successful authentication
   const [postAuthCallback, setPostAuthCallback] = useState<(() => void) | null>(null);
 
@@ -452,9 +455,11 @@ function App() {
                     { id: '/', label: 'Home', icon: <Home className="w-5 h-5" /> },
                     { id: '/about', label: 'About Us', icon: <Info className="w-5 h-5" /> },
                     { id: '/careers', label: 'Careers', icon: <Briefcase className="w-5 h-5" /> }, // ADDED: Careers link
+                    { id: '/jobs', label: 'Explore Jobs', icon: <Briefcase className="w-5 h-5" /> }, // ADDED: Jobs link
                     { id: '/tutorials', label: 'Tutorials', icon: <BookOpen className="w-5 h-5" /> },
                     { id: '/contact', label: 'Contact', icon: <Phone className="w-5 h-5" /> },
                     ...(isAuthenticated ? [{ id: 'wallet', label: 'Referral & Wallet', icon: <Wallet className="w-5 h-5" /> }] : []),
+                    ...(isAuthenticated ? [{ id: '/jobs/applications', label: 'My Applications', icon: <FileText className="w-5 h-5" /> }] : []), // ADDED: Applications link
                   ].map((item) => (
                     <button
                       key={item.id}
@@ -482,11 +487,10 @@ function App() {
                   onShowProfile={handleShowProfile}
                 />
               </div>
-                  { id: '/jobs', label: 'Explore Jobs', icon: <Briefcase className="w-5 h-5" /> }, // ADDED: Jobs link
+                  
 
               <div className="mt-auto pt-4 border-t border-secondary-200 dark:border-dark-300">
                 <div className="bg-gradient-to-r from-primary-50 to-accent-50 rounded-xl p-4 dark:from-dark-200 dark:to-dark-300">
-                  ...(isAuthenticated ? [{ id: '/jobs/applications', label: 'My Applications', icon: <FileText className="w-5 h-5" /> }] : []), // ADDED: Applications link
                   <p className="text-sm text-secondary-700 mb-2 dark:text-gray-300">Need help with your resume?</p>
                   <button
                     onClick={() => {
