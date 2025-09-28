@@ -18,7 +18,7 @@ import {
   Plus,
   ChevronDown,
   ChevronUp,
-  BriefCase
+  Briefcase
 } from 'lucide-react';
 // Assuming these imports exist in the user's project
 // import { paymentService } from '../../services/paymentService';
