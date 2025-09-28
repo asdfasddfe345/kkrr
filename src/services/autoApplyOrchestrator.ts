@@ -20,7 +20,6 @@ interface AutoApplyResponse {
   applicationResult?: AutoApplyResult;
   error?: string;
 }
-import { autoApplyOrchestrator } from './autoApplyOrchestrator';
 
 class AutoApplyOrchestrator {
   async initiateAutoApply(request: AutoApplyRequest): Promise<AutoApplyResponse> {
@@ -245,5 +244,6 @@ class AutoApplyOrchestrator {
   }
 }
 
-const autoApplyOrchestratorInstance = new AutoApplyOrchestrator();
-export { autoApplyOrchestratorInstance as autoApplyOrchestrator };
+export const autoApplyOrchestrator = new AutoApplyOrchestrator();
+
+export { autoApplyOrchestrator }
