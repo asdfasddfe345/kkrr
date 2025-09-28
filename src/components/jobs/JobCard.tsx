@@ -1,3 +1,4 @@
+```typescript
 // src/components/jobs/JobCard.tsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -20,11 +21,9 @@ import {
 } from 'lucide-react';
 import { JobListing, AutoApplyResult, OptimizedResume } from '../../types/jobs';
 import { jobsService } from '../../services/jobsService';
-// ... (other imports)
 import { autoApplyOrchestrator } from '../../services/autoApplyOrchestrator';
 import { profileResumeService } from '../../services/profileResumeService';
 import { useAuth } from '../../contexts/AuthContext';
-// ... (rest of the file)
 
 interface JobCardProps {
   job: JobListing;
@@ -46,26 +45,6 @@ export const JobCard: React.FC<JobCardProps> = ({
   const [isAutoApplying, setIsAutoApplying] = useState(false);
   const [optimizedResume, setOptimizedResume] = useState<OptimizedResume | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [profileValidation, setProfileValidation] = useState<{
-    isComplete: boolean;
-    missingFields: string[];
-  } | null>(null);
-
-  // Check profile completeness when component mounts (if authenticated)
-  useEffect(() => {
-    const checkProfile = async () => {
-      if (isAuthenticated && user) {
-        try {
-          const validation = await profileResumeService.isProfileCompleteForAutoApply(user.id);
-          setProfileValidation(validation);
-        } catch (err) {
-          console.error('Error checking profile completeness:', err);
-        }
-      }
-    };
-    
-    checkProfile();
-  }, [isAuthenticated, user]);
   const [profileValidation, setProfileValidation] = useState<{
     isComplete: boolean;
     missingFields: string[];
@@ -383,17 +362,8 @@ export const JobCard: React.FC<JobCardProps> = ({
             </div>
           </div>
         )}
-        {isAuthenticated && profileValidation && !profileValidation.isComplete && (
-          <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg dark:bg-orange-900/20 dark:border-orange-500/50">
-            <div className="flex items-center text-orange-700 dark:text-orange-300">
-              <AlertCircle className="w-4 h-4 mr-2" />
-              <span className="text-xs">
-                Complete your profile to enable auto-apply: {profileValidation.missingFields.join(', ')}
-              </span>
-            </div>
-          </div>
-        )}
       </div>
     </motion.div>
   );
 };
+```
