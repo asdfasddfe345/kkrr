@@ -11,10 +11,56 @@ interface AutoApplyRequest {
   optimizedResumeId: string;
 }
 
+interface ExternalBrowserServicePayload {
+  applicationUrl: string;
+  userData: {
+    fullName: string;
+    email: string;
+    phone: string;
+    linkedin?: string;
+    github?: string;
+    location?: string;
+    education: any[];
+    workExperience: any[];
+    skills: any[];
+    certifications: any[];
+    summary?: string;
+    careerObjective?: string;
+  };
+  resumeFileUrl: string;
+  jobDetails: {
+    title: string;
+    company: string;
+    domain: string;
+    experience: string;
+    qualification: string;
+  };
+  applicationMetadata: {
+    userId: string;
+    jobId: string;
+    optimizedResumeId: string;
+    timestamp: string;
+  };
+}
+
+interface ExternalBrowserServiceResponse {
+  success: boolean;
+  message: string;
+  status: 'submitted' | 'failed';
+  screenshotUrl?: string;
+  error?: string;
+  formFieldsFilled?: {
+    [fieldName: string]: string;
+  };
+  applicationConfirmationText?: string;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
+
+  let autoApplyLogId: string | null = null;
 
   try {
     const { jobId, optimizedResumeId }: AutoApplyRequest = await req.json()
@@ -23,6 +69,8 @@ Deno.serve(async (req: Request) => {
     if (!jobId || !optimizedResumeId) {
       throw new Error('Missing jobId or optimizedResumeId')
     }
+
+    console.log(`[${new Date().toISOString()}] Auto-apply started for job: ${jobId}, resume: ${optimizedResumeId}`)
 
     // Get user from auth header
     const authHeader = req.headers.get('authorization')
@@ -52,23 +100,7 @@ Deno.serve(async (req: Request) => {
       throw new Error('Job not found')
     }
 
-    // Get user profile for auto-apply
-    const { data: userProfile, error: profileError } = await supabase
-      .rpc('get_user_auto_apply_profile', { user_uuid: user.id })
-
-    if (profileError || !userProfile || userProfile.length === 0) {
-      throw new Error('User profile not found or incomplete')
-    }
-
-    const profile = userProfile[0]
-
-    // Check if profile is complete for auto-apply
-    const { data: isComplete, error: completeError } = await supabase
-      .rpc('is_profile_complete_for_auto_apply', { user_uuid: user.id })
-
-    if (completeError || !isComplete) {
-      throw new Error('User profile is incomplete for auto-apply. Please complete your profile first.')
-    }
+    console.log(`[${new Date().toISOString()}] Job details fetched: ${job.role_title} at ${job.company_name}`)
 
     // Get optimized resume
     const { data: optimizedResume, error: resumeError } = await supabase
@@ -82,6 +114,8 @@ Deno.serve(async (req: Request) => {
       throw new Error('Optimized resume not found')
     }
 
+    console.log(`[${new Date().toISOString()}] Optimized resume fetched with score: ${optimizedResume.optimization_score}`)
+
     // Create auto apply log entry (pending status)
     const { data: autoApplyLog, error: logError } = await supabase
       .from('auto_apply_logs')
@@ -91,20 +125,9 @@ Deno.serve(async (req: Request) => {
         optimized_resume_id: optimizedResumeId,
         application_date: new Date().toISOString(),
         status: 'pending',
-        form_data_snapshot: {
-          full_name: profile.full_name,
-          email: profile.email_address,
-          phone: profile.phone,
-          linkedin: profile.linkedin_profile_url,
-          github: profile.github_profile_url,
-          headline: profile.resume_headline,
-          location: profile.current_location,
-          education: profile.education_details,
-          experience: profile.experience_details,
-          skills: profile.skills_details
-        }
+        form_data_snapshot: optimizedResume.resume_content
       })
-      .select()
+      .select('id')
       .single()
 
     if (logError) {
@@ -112,97 +135,185 @@ Deno.serve(async (req: Request) => {
       throw new Error('Failed to initiate auto-apply process')
     }
 
-    // Simulate auto-apply process
-    // In a real implementation, this would:
-    // 1. Navigate to the application URL
-    // 2. Fill out the form using the profile data
-    // 3. Upload the optimized resume
-    // 4. Submit the application
-    // 5. Capture a screenshot of the confirmation
-    // 6. Upload the screenshot to Supabase Storage
+    autoApplyLogId = autoApplyLog.id
+    console.log(`[${new Date().toISOString()}] Auto-apply log created with ID: ${autoApplyLogId}`)
 
-    try {
-      // Simulate auto-apply success
-      const applicationSuccess = Math.random() > 0.3 // 70% success rate for simulation
+    // Prepare payload for external headless browser service
+    const resumeContent = optimizedResume.resume_content
+    const externalServicePayload: ExternalBrowserServicePayload = {
+      applicationUrl: job.application_link,
+      userData: {
+        fullName: resumeContent.name || '',
+        email: resumeContent.email || '',
+        phone: resumeContent.phone || '',
+        linkedin: resumeContent.linkedin,
+        github: resumeContent.github,
+        location: resumeContent.location,
+        education: resumeContent.education || [],
+        workExperience: resumeContent.workExperience || [],
+        skills: resumeContent.skills || [],
+        certifications: resumeContent.certifications || [],
+        summary: resumeContent.summary,
+        careerObjective: resumeContent.careerObjective,
+      },
+      resumeFileUrl: optimizedResume.pdf_url || optimizedResume.docx_url || '',
+      jobDetails: {
+        title: job.role_title,
+        company: job.company_name,
+        domain: job.domain,
+        experience: job.experience_required,
+        qualification: job.qualification,
+      },
+      applicationMetadata: {
+        userId: user.id,
+        jobId: jobId,
+        optimizedResumeId: optimizedResumeId,
+        timestamp: new Date().toISOString(),
+      }
+    }
 
-      if (applicationSuccess) {
-        // Update status to submitted
-        const { error: updateError } = await supabase
-          .from('auto_apply_logs')
-          .update({
-            status: 'submitted',
-            screenshot_url: `https://example.com/screenshots/success_${autoApplyLog.id}.png` // Placeholder
-          })
-          .eq('id', autoApplyLog.id)
+    console.log(`[${new Date().toISOString()}] Payload prepared for external browser service`)
 
-        if (updateError) {
-          console.error('Error updating auto apply log to submitted:', updateError)
-        }
-
-        return new Response(
-          JSON.stringify({
-            success: true,
-            message: 'Application submitted successfully',
-            applicationId: autoApplyLog.id,
-            status: 'submitted',
-            screenshotUrl: `https://example.com/screenshots/success_${autoApplyLog.id}.png`,
-            resumeUrl: optimizedResume.pdf_url
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
-          },
-        )
-      } else {
-        // Update status to failed
-        const { error: updateError } = await supabase
-          .from('auto_apply_logs')
-          .update({
-            status: 'failed',
-            error_message: 'Simulated application failure - website may be down or changed'
-          })
-          .eq('id', autoApplyLog.id)
-
-        if (updateError) {
-          console.error('Error updating auto apply log to failed:', updateError)
-        }
-
-        return new Response(
-          JSON.stringify({
-            success: false,
-            message: 'Auto-apply failed. Please try manual apply.',
-            applicationId: autoApplyLog.id,
-            status: 'failed',
-            error: 'Simulated application failure - website may be down or changed',
-            fallbackUrl: job.application_link,
-            resumeUrl: optimizedResume.pdf_url
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400,
-          },
-        )
+    // Call external headless browser service
+    const externalServiceUrl = Deno.env.get('EXTERNAL_BROWSER_SERVICE_URL')
+    
+    if (!externalServiceUrl) {
+      console.warn('EXTERNAL_BROWSER_SERVICE_URL not configured, simulating auto-apply...')
+      
+      // Simulate auto-apply process (for demo/development)
+      const simulatedSuccess = Math.random() > 0.3 // 70% success rate
+      
+      const simulatedResponse: ExternalBrowserServiceResponse = {
+        success: simulatedSuccess,
+        message: simulatedSuccess 
+          ? 'Application submitted successfully via automated process'
+          : 'Auto-apply failed - website may have changed or requires manual intervention',
+        status: simulatedSuccess ? 'submitted' : 'failed',
+        screenshotUrl: simulatedSuccess 
+          ? `https://example.com/screenshots/success_${autoApplyLogId}.png`
+          : undefined,
+        error: simulatedSuccess 
+          ? undefined 
+          : 'Simulated failure - form fields could not be automatically filled',
+        formFieldsFilled: simulatedSuccess ? {
+          'full_name': resumeContent.name,
+          'email': resumeContent.email,
+          'phone': resumeContent.phone,
+          'resume_file': 'uploaded'
+        } : undefined,
+        applicationConfirmationText: simulatedSuccess 
+          ? 'Thank you for your application. We will review and get back to you within 5-7 business days.'
+          : undefined
       }
 
-    } catch (applyError) {
-      console.error('Error during auto-apply process:', applyError)
-
-      // Update status to failed
-      await supabase
+      // Update auto apply log with simulated results
+      const { error: updateError } = await supabase
         .from('auto_apply_logs')
         .update({
-          status: 'failed',
-          error_message: applyError.message || 'Unknown error during auto-apply'
+          status: simulatedResponse.status,
+          screenshot_url: simulatedResponse.screenshotUrl,
+          error_message: simulatedResponse.error,
         })
-        .eq('id', autoApplyLog.id)
+        .eq('id', autoApplyLogId)
+
+      if (updateError) {
+        console.error('Error updating auto apply log:', updateError)
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: simulatedResponse.success,
+          message: simulatedResponse.message,
+          applicationId: autoApplyLogId,
+          status: simulatedResponse.status,
+          screenshotUrl: simulatedResponse.screenshotUrl,
+          resumeUrl: optimizedResume.pdf_url,
+          error: simulatedResponse.error
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: simulatedResponse.success ? 200 : 400,
+        },
+      )
+    }
+
+    // Call external headless browser service
+    try {
+      console.log(`[${new Date().toISOString()}] Calling external browser service at: ${externalServiceUrl}`)
+      
+      const externalResponse = await fetch(externalServiceUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('EXTERNAL_SERVICE_API_KEY') || 'fallback-key'}`,
+          'X-Origin': 'primoboost-ai',
+        },
+        body: JSON.stringify(externalServicePayload),
+        signal: AbortSignal.timeout(120000), // 2 minute timeout for browser automation
+      })
+
+      if (!externalResponse.ok) {
+        const errorText = await externalResponse.text()
+        console.error(`External service error: ${externalResponse.status}`, errorText)
+        throw new Error(`External browser service failed: ${externalResponse.status}`)
+      }
+
+      const externalResult: ExternalBrowserServiceResponse = await externalResponse.json()
+      console.log(`[${new Date().toISOString()}] External service response:`, externalResult.success ? 'SUCCESS' : 'FAILED')
+
+      // Update auto apply log with actual results
+      const { error: updateError } = await supabase
+        .from('auto_apply_logs')
+        .update({
+          status: externalResult.status,
+          screenshot_url: externalResult.screenshotUrl,
+          error_message: externalResult.error,
+        })
+        .eq('id', autoApplyLogId)
+
+      if (updateError) {
+        console.error('Error updating auto apply log:', updateError)
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: externalResult.success,
+          message: externalResult.message,
+          applicationId: autoApplyLogId,
+          status: externalResult.status,
+          screenshotUrl: externalResult.screenshotUrl,
+          resumeUrl: optimizedResume.pdf_url,
+          error: externalResult.error,
+          formFieldsFilled: externalResult.formFieldsFilled,
+          confirmationText: externalResult.applicationConfirmationText
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: externalResult.success ? 200 : 400,
+        },
+      )
+
+    } catch (externalError) {
+      console.error('Error calling external browser service:', externalError)
+      
+      // Update log as failed
+      if (autoApplyLogId) {
+        await supabase
+          .from('auto_apply_logs')
+          .update({
+            status: 'failed',
+            error_message: `External service error: ${externalError.message}`,
+          })
+          .eq('id', autoApplyLogId)
+      }
 
       return new Response(
         JSON.stringify({
           success: false,
-          message: 'Auto-apply failed. Please try manual apply.',
-          applicationId: autoApplyLog.id,
+          message: 'Auto-apply failed due to external service error',
+          applicationId: autoApplyLogId,
           status: 'failed',
-          error: applyError.message || 'Unknown error during auto-apply',
+          error: externalError.message,
           fallbackUrl: job.application_link,
           resumeUrl: optimizedResume.pdf_url
         }),
@@ -215,10 +326,27 @@ Deno.serve(async (req: Request) => {
 
   } catch (error) {
     console.error('Error in auto-apply function:', error)
+    
+    // Update log as failed if we have the ID
+    if (autoApplyLogId) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      const supabase = createClient(supabaseUrl, supabaseServiceKey)
+      
+      await supabase
+        .from('auto_apply_logs')
+        .update({
+          status: 'failed',
+          error_message: error.message || 'Unknown error during auto-apply',
+        })
+        .eq('id', autoApplyLogId)
+    }
+
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message || 'Internal server error'
+        error: error.message || 'Internal server error',
+        applicationId: autoApplyLogId
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

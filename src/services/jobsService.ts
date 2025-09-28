@@ -2,8 +2,107 @@
 import { supabase } from '../lib/supabaseClient';
 import { JobListing, JobFilters, AutoApplyResult, ApplicationHistory, OptimizedResume } from '../types/jobs';
 import { sampleJobs, fetchJobListings } from './sampleJobsData';
+import { ResumeData } from '../types/resume';
+import { exportToPDF } from '../utils/exportUtils';
 
 class JobsService {
+  // Get a single job listing by ID
+  async getJobListingById(jobId: string): Promise<JobListing | null> {
+    try {
+      // First try to get from actual database
+      const { data: job, error } = await supabase
+        .from('job_listings')
+        .select('*')
+        .eq('id', jobId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching job listing:', error);
+        // Fallback to sample data
+        return sampleJobs.find(job => job.id === jobId) || null;
+      }
+
+      if (job) {
+        return job;
+      }
+
+      // Fallback to sample data if not found in database
+      return sampleJobs.find(job => job.id === jobId) || null;
+    } catch (error) {
+      console.error('Error in getJobListingById:', error);
+      // Final fallback to sample data
+      return sampleJobs.find(job => job.id === jobId) || null;
+    }
+  }
+
+  // Store optimized resume data and generate file URLs
+  async storeOptimizedResume(
+    userId: string, 
+    jobId: string, 
+    resumeData: ResumeData
+  ): Promise<string> {
+    try {
+      console.log('JobsService: Storing optimized resume for user:', userId, 'job:', jobId);
+
+      // Calculate optimization score (placeholder logic)
+      const optimizationScore = Math.floor(Math.random() * 20) + 80; // 80-100
+
+      // For now, we'll store placeholder URLs for PDF and DOCX
+      // In production, you would:
+      // 1. Generate actual PDF using exportToPDF
+      // 2. Upload to Supabase Storage
+      // 3. Store the public URLs
+      const placeholderPdfUrl = `https://example.com/resumes/optimized_${userId}_${jobId}.pdf`;
+      const placeholderDocxUrl = `https://example.com/resumes/optimized_${userId}_${jobId}.docx`;
+
+      const { data: optimizedResume, error } = await supabase
+        .from('optimized_resumes')
+        .insert({
+          user_id: userId,
+          job_listing_id: jobId,
+          resume_content: resumeData,
+          pdf_url: placeholderPdfUrl,
+          docx_url: placeholderDocxUrl,
+          optimization_score: optimizationScore
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('Error storing optimized resume:', error);
+        throw new Error('Failed to store optimized resume');
+      }
+
+      console.log('JobsService: Optimized resume stored with ID:', optimizedResume.id);
+      return optimizedResume.id;
+    } catch (error) {
+      console.error('Error in storeOptimizedResume:', error);
+      throw error;
+    }
+  }
+
+  // Get optimized resume by ID
+  async getOptimizedResumeById(optimizedResumeId: string): Promise<OptimizedResume | null> {
+    try {
+      const { data: optimizedResume, error } = await supabase
+        .from('optimized_resumes')
+        .select('*')
+        .eq('id', optimizedResumeId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching optimized resume:', error);
+        return null;
+      }
+
+      return optimizedResume;
+    } catch (error) {
+      console.error('Error in getOptimizedResumeById:', error);
+      return null;
+    }
+  }
+
   // Fetch job listings with filters
   async getJobListings(filters: JobFilters = {}, limit = 20, offset = 0): Promise<{
     jobs: JobListing[];

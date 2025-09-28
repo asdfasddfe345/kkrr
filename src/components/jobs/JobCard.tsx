@@ -1,5 +1,5 @@
 // src/components/jobs/JobCard.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Building2,
@@ -20,6 +20,9 @@ import {
 } from 'lucide-react';
 import { JobListing, AutoApplyResult, OptimizedResume } from '../../types/jobs';
 import { jobsService } from '../../services/jobsService';
+import { autoApplyOrchestrator } from '../../services/autoApplyOrchestrator';
+import { profileResumeService } from '../../services/profileResumeService';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface JobCardProps {
   job: JobListing;
@@ -36,10 +39,31 @@ export const JobCard: React.FC<JobCardProps> = ({
   isAuthenticated,
   onShowAuth
 }) => {
+  const { user } = useAuth();
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isAutoApplying, setIsAutoApplying] = useState(false);
   const [optimizedResume, setOptimizedResume] = useState<OptimizedResume | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [profileValidation, setProfileValidation] = useState<{
+    isComplete: boolean;
+    missingFields: string[];
+  } | null>(null);
+
+  // Check profile completeness when component mounts (if authenticated)
+  useEffect(() => {
+    const checkProfile = async () => {
+      if (isAuthenticated && user) {
+        try {
+          const validation = await profileResumeService.isProfileCompleteForAutoApply(user.id);
+          setProfileValidation(validation);
+        } catch (err) {
+          console.error('Error checking profile completeness:', err);
+        }
+      }
+    };
+    
+    checkProfile();
+  }, [isAuthenticated, user]);
 
   const handleOptimizeResume = async () => {
     if (!isAuthenticated) {
@@ -75,8 +99,14 @@ export const JobCard: React.FC<JobCardProps> = ({
   };
 
   const handleAutoApply = async () => {
-    if (!optimizedResume) {
-      await handleOptimizeResume();
+    if (!isAuthenticated || !user) {
+      onShowAuth();
+      return;
+    }
+
+    // Check if profile is complete for auto-apply
+    if (!profileValidation?.isComplete) {
+      setError(`Profile incomplete for auto-apply. Missing: ${profileValidation?.missingFields.join(', ') || 'profile data'}`);
       return;
     }
 
@@ -84,9 +114,25 @@ export const JobCard: React.FC<JobCardProps> = ({
     setError(null);
 
     try {
-      const result = await jobsService.autoApplyForJob(job.id, optimizedResume.id);
-      onAutoApply(job, result);
+      // Determine user type from profile
+      const userType = await autoApplyOrchestrator.getUserTypeFromProfile(user.id);
+      
+      console.log('JobCard: Starting intelligent auto-apply process...');
+      
+      // Use the orchestrator for the complete auto-apply flow
+      const orchestrationResult = await autoApplyOrchestrator.initiateAutoApply({
+        jobId: job.id,
+        userType: userType,
+        userId: user.id
+      });
+
+      if (orchestrationResult.success && orchestrationResult.applicationResult) {
+        onAutoApply(job, orchestrationResult.applicationResult);
+      } else {
+        throw new Error(orchestrationResult.error || 'Auto-apply orchestration failed');
+      }
     } catch (err) {
+      console.error('Auto-apply failed:', err);
       setError(err instanceof Error ? err.message : 'Auto-apply failed');
     } finally {
       setIsAutoApplying(false);
@@ -252,9 +298,9 @@ export const JobCard: React.FC<JobCardProps> = ({
 
           <button
             onClick={handleAutoApply}
-            disabled={isOptimizing || isAutoApplying}
+            disabled={isOptimizing || isAutoApplying || (isAuthenticated && !profileValidation?.isComplete)}
             className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
-              isOptimizing || isAutoApplying
+              isOptimizing || isAutoApplying || (isAuthenticated && !profileValidation?.isComplete)
                 ? 'bg-gray-400 text-white cursor-not-allowed'
                 : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl'
             }`}
@@ -262,16 +308,32 @@ export const JobCard: React.FC<JobCardProps> = ({
             {isAutoApplying ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Applying...</span>
+                <span>Auto-Applying...</span>
               </>
             ) : (
               <>
                 <Zap className="w-4 h-4" />
-                <span>Auto Apply</span>
+                <span>
+                  {isAuthenticated && !profileValidation?.isComplete 
+                    ? 'Complete Profile' 
+                    : 'Auto Apply'}
+                </span>
               </>
             )}
           </button>
         </div>
+        
+        {/* Profile Completion Warning */}
+        {isAuthenticated && profileValidation && !profileValidation.isComplete && (
+          <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg dark:bg-orange-900/20 dark:border-orange-500/50">
+            <div className="flex items-center text-orange-700 dark:text-orange-300">
+              <AlertCircle className="w-4 h-4 mr-2" />
+              <span className="text-xs">
+                Complete your profile to enable auto-apply: {profileValidation.missingFields.join(', ')}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   );
