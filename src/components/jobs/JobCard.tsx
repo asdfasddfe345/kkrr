@@ -1,4 +1,3 @@
-```typescript
 // src/components/jobs/JobCard.tsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -7,13 +6,10 @@ import {
   MapPin,
   Clock,
   GraduationCap,
-  IndianRupee,
   ExternalLink,
   Zap,
-  User,
   Calendar,
   Target,
-  Briefcase,
   Globe,
   CheckCircle,
   AlertCircle,
@@ -50,7 +46,6 @@ export const JobCard: React.FC<JobCardProps> = ({
     missingFields: string[];
   } | null>(null);
 
-  // Check profile completeness when component mounts (if authenticated)
   useEffect(() => {
     const checkProfile = async () => {
       if (isAuthenticated && user) {
@@ -62,15 +57,11 @@ export const JobCard: React.FC<JobCardProps> = ({
         }
       }
     };
-    
     checkProfile();
   }, [isAuthenticated, user]);
 
   const handleManualApplyClick = async () => {
-    if (!isAuthenticated) {
-      onShowAuth();
-      return;
-    }
+    if (!isAuthenticated) return onShowAuth();
 
     setIsOptimizing(true);
     setError(null);
@@ -78,16 +69,11 @@ export const JobCard: React.FC<JobCardProps> = ({
     try {
       let currentOptimizedResume = optimizedResume;
       if (!currentOptimizedResume) {
-        // If resume not yet optimized, do it now
         currentOptimizedResume = await jobsService.optimizeResumeForJob(job.id);
         setOptimizedResume(currentOptimizedResume);
       }
-      
-      if (currentOptimizedResume) {
-        onManualApply(job, currentOptimizedResume);
-      } else {
-        throw new Error('Failed to get optimized resume for manual apply.');
-      }
+      if (currentOptimizedResume) onManualApply(job, currentOptimizedResume);
+      else throw new Error('Failed to get optimized resume for manual apply.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to optimize resume for manual apply');
     } finally {
@@ -96,14 +82,13 @@ export const JobCard: React.FC<JobCardProps> = ({
   };
 
   const handleAutoApplyClick = async () => {
-    if (!isAuthenticated || !user) {
-      onShowAuth();
-      return;
-    }
-
-    // Check if profile is complete for auto-apply
+    if (!isAuthenticated || !user) return onShowAuth();
     if (!profileValidation?.isComplete) {
-      setError(`Profile incomplete for auto-apply. Missing: ${profileValidation?.missingFields.join(', ') || 'profile data'}`);
+      setError(
+        `Profile incomplete for auto-apply. Missing: ${
+          profileValidation?.missingFields.join(', ') || 'profile data'
+        }`
+      );
       return;
     }
 
@@ -111,25 +96,18 @@ export const JobCard: React.FC<JobCardProps> = ({
     setError(null);
 
     try {
-      // Determine user type from profile
       const userType = await autoApplyOrchestrator.getUserTypeFromProfile(user.id);
-      
-      console.log('JobCard: Starting intelligent auto-apply process...');
-      
-      // Use the orchestrator for the complete auto-apply flow
       const orchestrationResult = await autoApplyOrchestrator.initiateAutoApply({
         jobId: job.id,
-        userType: userType,
+        userType,
         userId: user.id
       });
-
       if (orchestrationResult.success && orchestrationResult.applicationResult) {
         onAutoApply(job, orchestrationResult.applicationResult);
       } else {
         throw new Error(orchestrationResult.error || 'Auto-apply orchestration failed');
       }
     } catch (err) {
-      console.error('Auto-apply failed:', err);
       setError(err instanceof Error ? err.message : 'Auto-apply failed');
     } finally {
       setIsAutoApplying(false);
@@ -138,44 +116,30 @@ export const JobCard: React.FC<JobCardProps> = ({
 
   const getLocationIcon = () => {
     switch (job.location_type) {
-      case 'Remote':
-        return <Globe className="w-4 h-4" />;
-      case 'Onsite':
-        return <Building2 className="w-4 h-4" />;
-      case 'Hybrid':
-        return <Target className="w-4 h-4" />;
-      default:
-        return <MapPin className="w-4 h-4" />;
+      case 'Remote': return <Globe className="w-4 h-4" />;
+      case 'Onsite': return <Building2 className="w-4 h-4" />;
+      case 'Hybrid': return <Target className="w-4 h-4" />;
+      default: return <MapPin className="w-4 h-4" />;
     }
   };
 
   const getDomainColor = (domain: string) => {
-    const colors: { [key: string]: string } = {
-      'SDE': 'from-blue-500 to-cyan-500',
+    const colors: Record<string, string> = {
+      SDE: 'from-blue-500 to-cyan-500',
       'Data Science': 'from-purple-500 to-pink-500',
-      'Product': 'from-green-500 to-emerald-500',
-      'Design': 'from-orange-500 to-red-500',
-      'Marketing': 'from-yellow-500 to-amber-500',
-      'Sales': 'from-indigo-500 to-blue-500',
+      Product: 'from-green-500 to-emerald-500',
+      Design: 'from-orange-500 to-red-500',
+      Marketing: 'from-yellow-500 to-amber-500',
+      Sales: 'from-indigo-500 to-blue-500'
     };
     return colors[domain] || 'from-gray-500 to-slate-500';
   };
 
   const formatPackage = () => {
     if (!job.package_amount || !job.package_type) return null;
-    
     const amount = job.package_amount;
-    let formattedAmount = '';
-    
-    if (amount >= 100000) {
-      formattedAmount = `${(amount / 100000).toFixed(1)}L`;
-    } else if (amount >= 1000) {
-      formattedAmount = `${(amount / 1000).toFixed(0)}K`;
-    } else {
-      formattedAmount = amount.toString();
-    }
-
-    return `₹${formattedAmount} ${job.package_type}`;
+    let formatted = amount >= 100000 ? `${(amount / 100000).toFixed(1)}L` : amount >= 1000 ? `${(amount / 1000).toFixed(0)}K` : amount.toString();
+    return `₹${formatted} ${job.package_type}`;
   };
 
   return (
@@ -191,23 +155,15 @@ export const JobCard: React.FC<JobCardProps> = ({
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center space-x-4">
             {job.company_logo_url ? (
-              <img
-                src={job.company_logo_url}
-                alt={`${job.company_name} logo`}
-                className="w-12 h-12 rounded-lg object-cover"
-              />
+              <img src={job.company_logo_url} alt={`${job.company_name} logo`} className="w-12 h-12 rounded-lg object-cover" />
             ) : (
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
                 {job.company_name.charAt(0)}
               </div>
             )}
             <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
-                {job.role_title}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 font-medium">
-                {job.company_name}
-              </p>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">{job.role_title}</h3>
+              <p className="text-gray-600 dark:text-gray-300 font-medium">{job.company_name}</p>
             </div>
           </div>
           {formatPackage() && (
@@ -218,23 +174,15 @@ export const JobCard: React.FC<JobCardProps> = ({
         </div>
 
         <div className="flex flex-wrap gap-2 mb-4">
-          <span className={\`px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${getDomainColor(job.domain)} text-white`}>
-            {job.domain}
-          </span>
+          <span className={`px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${getDomainColor(job.domain)} text-white`}>{job.domain}</span>
           <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium flex items-center dark:bg-blue-900/20 dark:text-blue-300">
-            {getLocationIcon()}
-            <span className="ml-1">{job.location_type}</span>
-            {job.location_city && <span>, {job.location_city}</span>}
+            {getLocationIcon()}<span className="ml-1">{job.location_type}</span>{job.location_city && <span>, {job.location_city}</span>}
           </span>
           <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium flex items-center dark:bg-purple-900/20 dark:text-purple-300">
-            <Clock className="w-3 h-3 mr-1" />
-            {job.experience_required}
+            <Clock className="w-3 h-3 mr-1" />{job.experience_required}
           </span>
         </div>
-
-        <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-          {job.short_description}
-        </p>
+        <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">{job.short_description}</p>
       </div>
 
       {/* Details */}
@@ -250,89 +198,25 @@ export const JobCard: React.FC<JobCardProps> = ({
           </div>
         </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-500/50">
-            <div className="flex items-center text-red-700 dark:text-red-300">
-              <AlertCircle className="w-4 h-4 mr-2" />
-              <span className="text-sm">{error}</span>
-            </div>
-          </div>
-        )}
-
-        {optimizedResume && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/20 dark:border-green-500/50">
-            <div className="flex items-center text-green-700 dark:text-green-300">
-              <CheckCircle className="w-4 h-4 mr-2" />
-              <span className="text-sm">
-                Resume optimized! Score: {optimizedResume.optimization_score}/100
-              </span>
-            </div>
-          </div>
-        )}
+        {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-500/50 flex items-center text-red-700 dark:text-red-300"><AlertCircle className="w-4 h-4 mr-2"/><span className="text-sm">{error}</span></div>}
+        {optimizedResume && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/20 dark:border-green-500/50 flex items-center text-green-700 dark:text-green-300"><CheckCircle className="w-4 h-4 mr-2"/><span className="text-sm">Resume optimized! Score: {optimizedResume.optimization_score}/100</span></div>}
 
         <div className="flex space-x-3">
-          <button
-            onClick={handleManualApplyClick}
-            disabled={isOptimizing}
-            className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
-              isOptimizing
-                ? 'bg-gray-400 text-white cursor-not-allowed'
-                : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl'
-            }`}
-          >
-            {isOptimizing ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Optimizing...</span>
-              </>
-            ) : (
-              <>
-                <ExternalLink className="w-4 h-4" />
-                <span>Manual Apply</span>
-              </>
-            )}
+          <button onClick={handleManualApplyClick} disabled={isOptimizing} className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${isOptimizing ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl'}`}>
+            {isOptimizing ? <><Loader2 className="w-4 h-4 animate-spin"/><span>Optimizing...</span></> : <><ExternalLink className="w-4 h-4"/><span>Manual Apply</span></>}
           </button>
-
-          <button
-            onClick={handleAutoApplyClick}
-            disabled={isOptimizing || isAutoApplying || (isAuthenticated && !profileValidation?.isComplete)}
-            className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
-              isOptimizing || isAutoApplying || (isAuthenticated && !profileValidation?.isComplete)
-                ? 'bg-gray-400 text-white cursor-not-allowed'
-                : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl'
-            }`}
-          >
-            {isAutoApplying ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Auto-Applying...</span>
-              </>
-            ) : (
-              <>
-                <Zap className="w-4 h-4" />
-                <span>
-                  {isAuthenticated && !profileValidation?.isComplete 
-                    ? 'Complete Profile' 
-                    : 'Auto Apply'}
-                </span>
-              </>
-            )}
+          <button onClick={handleAutoApplyClick} disabled={isOptimizing || isAutoApplying || (isAuthenticated && !profileValidation?.isComplete)} className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${isOptimizing || isAutoApplying || (isAuthenticated && !profileValidation?.isComplete) ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl'}`}>
+            {isAutoApplying ? <><Loader2 className="w-4 h-4 animate-spin"/><span>Auto-Applying...</span></> : <><Zap className="w-4 h-4"/><span>{isAuthenticated && !profileValidation?.isComplete ? 'Complete Profile' : 'Auto Apply'}</span></>}
           </button>
         </div>
-        
-        {/* Profile Completion Warning */}
+
         {isAuthenticated && profileValidation && !profileValidation.isComplete && (
-          <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg dark:bg-orange-900/20 dark:border-orange-500/50">
-            <div className="flex items-center text-orange-700 dark:text-orange-300">
-              <AlertCircle className="w-4 h-4 mr-2" />
-              <span className="text-xs">
-                Complete your profile to enable auto-apply: {profileValidation.missingFields.join(', ')}
-              </span>
-            </div>
+          <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg dark:bg-orange-900/20 dark:border-orange-500/50 flex items-center text-orange-700 dark:text-orange-300">
+            <AlertCircle className="w-4 h-4 mr-2"/>
+            <span className="text-xs">Complete your profile to enable auto-apply: {profileValidation.missingFields.join(', ')}</span>
           </div>
         )}
       </div>
     </motion.div>
   );
 };
-```
