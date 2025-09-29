@@ -39,8 +39,7 @@ export const JobCard: React.FC<JobCardProps> = ({
   onManualApply,
   onAutoApply,
   isAuthenticated,
-  onShowAuth,
-  onCompleteProfile // NEW: Destructure the new prop
+  onShowAuth
 }) => {
   const { user } = useAuth();
   const [isOptimizing, setIsOptimizing] = useState(false);
