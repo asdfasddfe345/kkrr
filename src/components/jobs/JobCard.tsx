@@ -1,6 +1,5 @@
-```typescript
 // src/components/jobs/JobCard.tsx
-import React, { useState, useEffect } from 'react';
+import React, 'useState', useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Building2,
@@ -19,11 +18,12 @@ import {
   AlertCircle,
   Loader2
 } from 'lucide-react';
-import { JobListing, AutoApplyResult, OptimizedResume } from '../../types/jobs';
-import { jobsService } from '../../services/jobsService';
-import { autoApplyOrchestrator } from '../../services/autoApplyOrchestrator';
-import { profileResumeService } from '../../services/profileResumeService';
-import { useAuth } from '../../contexts/AuthContext';
+// Corrected: Using absolute paths from 'src' to prevent resolution errors.
+import { JobListing, AutoApplyResult, OptimizedResume } from 'src/types/jobs';
+import { jobsService } from 'src/services/jobsService';
+import { autoApplyOrchestrator } from 'src/services/autoApplyOrchestrator';
+import { profileResumeService } from 'src/services/profileResumeService';
+import { useAuth } from 'src/contexts/AuthContext';
 
 interface JobCardProps {
   job: JobListing;
@@ -174,8 +174,9 @@ export const JobCard: React.FC<JobCardProps> = ({
     } else {
       formattedAmount = amount.toString();
     }
-
-    return \`₹${formattedAmount} ${job.package_type}`;
+    
+    // Corrected: Removed the escaping backslash before the backtick.
+    return `₹${formattedAmount} ${job.package_type}`;
   };
 
   return (
@@ -193,7 +194,8 @@ export const JobCard: React.FC<JobCardProps> = ({
             {job.company_logo_url ? (
               <img
                 src={job.company_logo_url}
-                alt={\`${job.company_name} logo`}
+                // Corrected: Used proper JSX syntax for template literals.
+                alt={`${job.company_name} logo`}
                 className="w-12 h-12 rounded-lg object-cover"
               />
             ) : (
@@ -218,6 +220,7 @@ export const JobCard: React.FC<JobCardProps> = ({
         </div>
 
         <div className="flex flex-wrap gap-2 mb-4">
+          {/* Corrected: Used proper JSX syntax for template literals in classNames. */}
           <span className={`px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${getDomainColor(job.domain)} text-white`}>
             {job.domain}
           </span>
@@ -274,7 +277,7 @@ export const JobCard: React.FC<JobCardProps> = ({
           <button
             onClick={handleManualApplyClick}
             disabled={isOptimizing}
-            className={\`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
+            className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
               isOptimizing
                 ? 'bg-gray-400 text-white cursor-not-allowed'
                 : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl'
@@ -296,7 +299,7 @@ export const JobCard: React.FC<JobCardProps> = ({
           <button
             onClick={handleAutoApplyClick}
             disabled={isOptimizing || isAutoApplying || (isAuthenticated && !profileValidation?.isComplete)}
-            className={\`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
+            className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
               isOptimizing || isAutoApplying || (isAuthenticated && !profileValidation?.isComplete)
                 ? 'bg-gray-400 text-white cursor-not-allowed'
                 : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl'
@@ -335,4 +338,4 @@ export const JobCard: React.FC<JobCardProps> = ({
     </motion.div>
   );
 };
-```
+
