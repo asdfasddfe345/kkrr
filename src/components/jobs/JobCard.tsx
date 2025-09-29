@@ -168,14 +168,14 @@ export const JobCard: React.FC<JobCardProps> = ({
     let formattedAmount = '';
     
     if (amount >= 100000) {
-      formattedAmount = \`${(amount / 100000).toFixed(1)}L`;
+      formattedAmount = `${(amount / 100000).toFixed(1)}L`;
     } else if (amount >= 1000) {
-      formattedAmount = \`${(amount / 1000).toFixed(0)}K`;
+      formattedAmount = `${(amount / 1000).toFixed(0)}K`;
     } else {
       formattedAmount = amount.toString();
     }
 
-    return \`₹${formattedAmount} ${job.package_type}`;
+    return `₹${formattedAmount} ${job.package_type}`;
   };
 
   return (
@@ -193,7 +193,7 @@ export const JobCard: React.FC<JobCardProps> = ({
             {job.company_logo_url ? (
               <img
                 src={job.company_logo_url}
-                alt={\`${job.company_name} logo`}
+                alt={`${job.company_name} logo`}
                 className="w-12 h-12 rounded-lg object-cover"
               />
             ) : (
@@ -274,7 +274,7 @@ export const JobCard: React.FC<JobCardProps> = ({
           <button
             onClick={handleManualApplyClick}
             disabled={isOptimizing}
-            className={\`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
+            className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
               isOptimizing
                 ? 'bg-gray-400 text-white cursor-not-allowed'
                 : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl'
@@ -296,7 +296,7 @@ export const JobCard: React.FC<JobCardProps> = ({
           <button
             onClick={handleAutoApplyClick}
             disabled={isOptimizing || isAutoApplying || (isAuthenticated && !profileValidation?.isComplete)}
-            className={\`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
+            className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
               isOptimizing || isAutoApplying || (isAuthenticated && !profileValidation?.isComplete)
                 ? 'bg-gray-400 text-white cursor-not-allowed'
                 : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl'
