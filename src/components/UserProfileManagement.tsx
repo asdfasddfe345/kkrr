@@ -1249,7 +1249,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                 </form>
               </div>
             </div>
-          )}
+          </div>
         )}
       </div>
     </div>
