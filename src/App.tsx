@@ -26,6 +26,8 @@ import { CareersPage } from './components/pages/CareersPage';
 import { JobDetailsPage } from './components/pages/JobDetailsPage'; // Import JobDetailsPage
 import { JobsPage } from './components/pages/JobsPage'; // Import JobsPage
 import { MyApplicationsPage } from './components/pages/MyApplicationsPage'; // Import MyApplicationsPage
+import { AdminRoute } from './components/admin/AdminRoute'; // Import AdminRoute
+import { JobUploadForm } from './components/admin/JobUploadForm'; // Import JobUploadForm
 
 function App() {
   const { isAuthenticated, user, markProfilePromptSeen, isLoading } = useAuth();
@@ -427,6 +429,11 @@ function App() {
         <Route path="/careers/:jobId" element={<JobDetailsPage {...commonPageProps} />} /> {/* NEW ROUTE */}
         <Route path="/jobs" element={<JobsPage {...commonPageProps} onShowProfile={handleShowProfile} />} /> {/* NEW ROUTE - Added onShowProfile */}
         <Route path="/jobs/applications" element={<MyApplicationsPage {...commonPageProps} />} /> {/* NEW ROUTE */}
+        <Route path="/admin/jobs/new" element={
+          <AdminRoute>
+            <JobUploadForm />
+          </AdminRoute>
+        } /> {/* NEW ROUTE: Admin job upload */}
       </Routes>
 
       {showMobileMenu && (

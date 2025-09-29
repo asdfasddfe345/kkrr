@@ -34,10 +34,13 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
+import { parseFile } from '../utils/fileParser';
+import { optimizeResume } from '../services/geminiService';
+import { FileUpload } from './FileUpload';
 import { paymentService } from '../services/paymentService';
 import { supabase } from '../lib/supabaseClient';
 import { User as AuthUser } from '../types/auth';
-import { Education, WorkExperience, Skill, Project, Certification } from '../types/resume';
+import { Education, WorkExperience, Skill, Project, Certification, ResumeData, ExtractionResult } from '../types/resume';
 
 // Zod Schemas for nested objects
 const educationSchema = z.object({
@@ -126,6 +129,11 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
   const [referralError, setReferralError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['personal', 'social']));
+  
+  // Resume upload states
+  const [isProcessingResume, setIsProcessingResume] = useState(false);
+  const [resumeUploadError, setResumeUploadError] = useState<string | null>(null);
+  const [resumeUploadSuccess, setResumeUploadSuccess] = useState(false);
 
   const {
     register,
@@ -385,6 +393,76 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
       }
       return newSet;
     });
+  };
+
+  // Handle resume upload and data extraction
+  const handleResumeUpload = async (extractionResult: ExtractionResult) => {
+    if (!user || !extractionResult.text.trim()) {
+      setResumeUploadError('No valid resume content found');
+      return;
+    }
+
+    setIsProcessingResume(true);
+    setResumeUploadError(null);
+    setResumeUploadSuccess(false);
+
+    try {
+      console.log('UserProfileManagement: Processing uploaded resume...');
+      
+      // Use optimizeResume to parse the resume structure
+      // For profile extraction, we don't need a job description
+      const parsedResumeData = await optimizeResume(
+        extractionResult.text,
+        '', // Empty job description for profile parsing
+        'experienced', // Default user type for parsing
+        user.name,
+        user.email,
+        user.phone || '',
+        user.linkedin || '',
+        user.github || '',
+        undefined,
+        undefined,
+        undefined // No target role for profile parsing
+      );
+
+      console.log('UserProfileManagement: Resume parsed successfully:', parsedResumeData);
+
+      // Map ResumeData to ProfileFormData and pre-fill the form
+      const profileData: Partial<ProfileFormData> = {
+        fullName: parsedResumeData.name || user.name,
+        emailAddress: parsedResumeData.email || user.email,
+        phone: parsedResumeData.phone || user.phone || '',
+        linkedinProfileUrl: parsedResumeData.linkedin || user.linkedin || '',
+        githubProfileUrl: parsedResumeData.github || user.github || '',
+        resumeHeadline: parsedResumeData.summary || parsedResumeData.careerObjective || user.resumeHeadline || '',
+        currentLocation: parsedResumeData.location || user.currentLocation || '',
+        educationDetails: parsedResumeData.education || [],
+        experienceDetails: parsedResumeData.workExperience || [],
+        skillsDetails: parsedResumeData.skills || [],
+        projectsDetails: parsedResumeData.projects || [],
+        certificationsDetails: (parsedResumeData.certifications || []).map(cert => {
+          if (typeof cert === 'string') {
+            return { title: cert, description: '', issuer: '', year: '' };
+          }
+          return cert;
+        }),
+      };
+
+      // Reset form with extracted data
+      reset(profileData);
+
+      // Expand all sections to show the pre-filled data
+      setExpandedSections(new Set(['personal', 'social', 'education', 'experience', 'skills', 'projects', 'certifications']));
+      
+      setResumeUploadSuccess(true);
+      setTimeout(() => setResumeUploadSuccess(false), 5000);
+
+    } catch (error) {
+      console.error('UserProfileManagement: Error processing resume:', error);
+      setResumeUploadError(error instanceof Error ? error.message : 'Failed to process resume');
+    } finally {
+      setIsProcessingResume(false);
+    }
   };
 
   if (!isOpen) return null;

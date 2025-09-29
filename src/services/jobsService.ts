@@ -4,10 +4,69 @@ import { JobListing, JobFilters, AutoApplyResult, ApplicationHistory, OptimizedR
 import { sampleJobs, fetchJobListings } from './sampleJobsData';
 import { ResumeData } from '../types/resume';
 import { exportToPDF } from '../utils/exportUtils';
-import { ResumeData } from '../types/resume';
-import { exportToPDF } from '../utils/exportUtils';
+import { supabase } from '../lib/supabaseClient';
 
 class JobsService {
+  // Create a new job listing (Admin only)
+  async createJobListing(jobData: Partial<JobListing>): Promise<JobListing> {
+    try {
+      console.log('JobsService: Creating new job listing...');
+      
+      // Validate required fields
+      if (!jobData.company_name || !jobData.role_title || !jobData.domain || 
+          !jobData.location_type || !jobData.experience_required || 
+          !jobData.qualification || !jobData.short_description || 
+          !jobData.full_description || !jobData.application_link) {
+        throw new Error('Missing required job listing fields');
+      }
+
+      // Get current session for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Authentication required');
+      }
+
+      // Prepare job data with default values
+      const insertData = {
+        company_name: jobData.company_name,
+        company_logo_url: jobData.company_logo_url || null,
+        role_title: jobData.role_title,
+        package_amount: jobData.package_amount || null,
+        package_type: jobData.package_type || null,
+        domain: jobData.domain,
+        location_type: jobData.location_type,
+        location_city: jobData.location_city || null,
+        experience_required: jobData.experience_required,
+        qualification: jobData.qualification,
+        short_description: jobData.short_description,
+        full_description: jobData.full_description,
+        application_link: jobData.application_link,
+        posted_date: new Date().toISOString(),
+        source_api: 'manual_admin',
+        is_active: jobData.is_active !== undefined ? jobData.is_active : true,
+      };
+
+      console.log('JobsService: Inserting job data:', insertData);
+
+      const { data: newJob, error } = await supabase
+        .from('job_listings')
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('JobsService: Error creating job listing:', error);
+        throw new Error(`Failed to create job listing: ${error.message}`);
+      }
+
+      console.log('JobsService: Job listing created successfully with ID:', newJob.id);
+      return newJob;
+    } catch (error) {
+      console.error('JobsService: Error in createJobListing:', error);
+      throw error;
+    }
+  }
+
   // Get a single job listing by ID
   async getJobListingById(jobId: string): Promise<JobListing | null> {
     try {

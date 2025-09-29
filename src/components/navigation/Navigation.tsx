@@ -1,6 +1,6 @@
 // src/components/navigation/Navigation.tsx
 import React, { useState } from 'react';
-import { Home, Info, Phone, BookOpen, MessageCircle, ChevronDown, Target, TrendingUp, PlusCircle, Zap, Sparkles, Crown, Users, Briefcase, FileText } from 'lucide-react'; // ADD Briefcase and FileText for jobs
+import { Home, Info, Phone, BookOpen, MessageCircle, ChevronDown, Target, TrendingUp, PlusCircle, Zap, Sparkles, Crown, Users, Briefcase, FileText, Shield } from 'lucide-react'; // ADD Shield for admin
 import { useAuth } from '../../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom'; // Import Link and useNavigate
 
@@ -11,7 +11,7 @@ interface NavigationProps {
 
 export const Navigation: React.FC<NavigationProps> = ({ onPageChange }) => { // REMOVED currentPage from props
   const [showAIToolsDropdown, setShowAIToolsDropdown] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth(); // Added user to check for admin role
   const navigate = useNavigate(); // Initialize useNavigate
 
   const navigationItems = [
@@ -77,6 +77,17 @@ export const Navigation: React.FC<NavigationProps> = ({ onPageChange }) => { // 
               </div>
             )}
           </div>
+        )}
+
+        {/* Admin Menu - Only show if user is admin */}
+        {isAuthenticated && user?.role === 'admin' && (
+          <Link
+            to="/admin/jobs/new"
+            className="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 text-gray-700 hover:text-red-600 hover:bg-red-50 dark:text-gray-300 dark:hover:text-red-400 dark:hover:bg-red-900/20"
+          >
+            <Shield className="w-4 h-4" />
+            <span>Admin Panel</span>
+          </Link>
         )}
       </nav>
     </>

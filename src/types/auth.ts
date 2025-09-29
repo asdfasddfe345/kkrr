@@ -15,6 +15,7 @@ export interface User {
   lastLogin: string;
   hasSeenProfilePrompt?: boolean;
   resumesCreatedCount?: number;
+  role?: 'client' | 'admin'; // NEW: User role for admin functionality
   // NEW: Resume-related details
   resumeHeadline?: string;
   currentLocation?: string;

@@ -139,6 +139,7 @@ class AuthService {
     referral_code?: string,
     has_seen_profile_prompt?: boolean,
     resumes_created_count?: number,
+    role?: 'client' | 'admin',
     resume_headline?: string,
     current_location?: string,
     education_details?: any,
@@ -152,7 +153,7 @@ class AuthService {
       const { data, error }
         = await supabase
         .from('user_profiles')
-        .select('full_name, email_address, phone, linkedin_profile, wellfound_profile, username, referral_code, has_seen_profile_prompt, resumes_created_count, resume_headline, current_location, education_details, experience_details, skills_details, projects_details, certifications_details')
+        .select('full_name, email_address, phone, linkedin_profile, wellfound_profile, username, referral_code, has_seen_profile_prompt, resumes_created_count, role, resume_headline, current_location, education_details, experience_details, skills_details, projects_details, certifications_details')
         .eq('id', userId)
         .maybeSingle();
       if (error) {
@@ -241,6 +242,7 @@ class AuthService {
         lastLogin: new Date().toISOString(),
         hasSeenProfilePrompt: profile?.has_seen_profile_prompt || false,
         resumesCreatedCount: profile?.resumes_created_count || 0, // ADDED: Map new field
+        role: profile?.role || 'client', // NEW: Map role field
       };
       console.log('AuthService: getCurrentUser completed. Returning user data.');
       return userResult;
