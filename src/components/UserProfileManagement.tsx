@@ -313,7 +313,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': \`Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ userId: user.id }),
       });
