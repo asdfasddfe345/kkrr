@@ -196,7 +196,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
         experience_details: user.experienceDetails || [],
         skills_details: user.skillsDetails || [],
         // Projects and certifications are not directly on the user object yet,
-        // so they won't be pre-filled from `user` unless added to the AuthContext User type.
+        // so they won't be pre-filled from \`user` unless added to the AuthContext User type.
         projects_details: [],
         certifications_details: [],
       });
