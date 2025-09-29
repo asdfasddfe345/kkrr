@@ -1,8 +1,8 @@
 // src/services/autoApplyOrchestrator.ts
-import { profileResumeService } from './profileResumeService';
-import { jobsService } from './jobsService';
-import { optimizeResume } from './geminiService';
-import { analyzeProjectSuitability } from './projectAnalysisService';
+import { profileResumeService } from '../services/profileResumeService';
+import { jobsService } from '../services/jobsService';
+import { optimizeResume } from '../services/geminiService';
+import { analyzeProjectSuitability } from '../services/projectAnalysisService';
 import { exportToPDF } from '../utils/exportUtils';
 import { supabase } from '../lib/supabaseClient';
 import { ResumeData, UserType } from '../types/resume';
@@ -216,32 +216,6 @@ class AutoApplyOrchestrator {
 
   // Method to determine user type from profile data
   async getUserTypeFromProfile(userId: string): Promise<UserType> {
-    const { data: profileData, error } = await supabase
-      .from('user_profiles')
-      .select('experience_details, education_details, program_start_date')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (error || !profileData) {
-      return 'fresher'; // Default fallback
-    }
-
-    // Check if user has work experience
-    const hasWorkExperience = profileData.experience_details && 
-      Array.isArray(profileData.experience_details) && 
-      profileData.experience_details.length > 0;
-
-    // Check if user is currently in a program (student)
-    const isCurrentStudent = profileData.program_start_date && 
-      new Date(profileData.program_start_date) > new Date(Date.now() - 365 * 24 * 60 * 60 * 1000); // Within last year
-
-    if (isCurrentStudent) {
-      return 'student';
-    } else if (hasWorkExperience) {
-      return 'experienced';
-    } else {
-      return 'fresher';
-    }
     const { data: profileData, error } = await supabase
       .from('user_profiles')
       .select('experience_details, education_details, program_start_date')
