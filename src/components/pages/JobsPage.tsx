@@ -27,11 +27,13 @@ import { AutoApplyProgressModal } from '../modals/AutoApplyProgressModal';
 interface JobsPageProps {
   isAuthenticated: boolean;
   onShowAuth: () => void;
+  onShowProfile?: (mode?: 'profile' | 'wallet') => void; // NEW: Function to open profile management
 }
 
 export const JobsPage: React.FC<JobsPageProps> = ({
   isAuthenticated,
-  onShowAuth
+  onShowAuth,
+  onShowProfile // NEW: Destructure the new prop
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -234,6 +236,7 @@ export const JobsPage: React.FC<JobsPageProps> = ({
                   onAutoApply={handleAutoApply}
                   isAuthenticated={isAuthenticated}
                   onShowAuth={onShowAuth}
+                  onCompleteProfile={() => onShowProfile && onShowProfile('profile')} // NEW: Pass profile completion handler
                 />
               ))}
             </div>

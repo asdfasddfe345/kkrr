@@ -425,7 +425,7 @@ function App() {
         <Route path="/pricing" element={<PricingPage onShowAuth={handleShowAuth} onShowSubscriptionPlans={handleShowPlanSelection} />} />
         <Route path="/careers" element={<CareersPage {...commonPageProps} />} />
         <Route path="/careers/:jobId" element={<JobDetailsPage {...commonPageProps} />} /> {/* NEW ROUTE */}
-        <Route path="/jobs" element={<JobsPage {...commonPageProps} />} /> {/* NEW ROUTE */}
+        <Route path="/jobs" element={<JobsPage {...commonPageProps} onShowProfile={handleShowProfile} />} /> {/* NEW ROUTE - Added onShowProfile */}
         <Route path="/jobs/applications" element={<MyApplicationsPage {...commonPageProps} />} /> {/* NEW ROUTE */}
       </Routes>
 
