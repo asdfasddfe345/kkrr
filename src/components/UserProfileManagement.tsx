@@ -1351,8 +1351,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                   </div>
                 </div>
               </div>
-
-              {/* Submit Button */}
+            </form>
           )} {/* End viewMode === 'profile' conditional block */}
 
 
