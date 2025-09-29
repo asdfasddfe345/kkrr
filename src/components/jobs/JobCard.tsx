@@ -168,9 +168,9 @@ export const JobCard: React.FC<JobCardProps> = ({
     let formattedAmount = '';
     
     if (amount >= 100000) {
-      formattedAmount = \`${(amount / 100000).toFixed(1)}L`;
+      formattedAmount = `${(amount / 100000).toFixed(1)}L`;
     } else if (amount >= 1000) {
-      formattedAmount = \`${(amount / 1000).toFixed(0)}K`;
+      formattedAmount = `${(amount / 1000).toFixed(0)}K`;
     } else {
       formattedAmount = amount.toString();
     }
@@ -218,7 +218,7 @@ export const JobCard: React.FC<JobCardProps> = ({
         </div>
 
         <div className="flex flex-wrap gap-2 mb-4">
-          <span className={\`px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${getDomainColor(job.domain)} text-white`}>
+          <span className={`px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${getDomainColor(job.domain)} text-white`}>
             {job.domain}
           </span>
           <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium flex items-center dark:bg-blue-900/20 dark:text-blue-300">
