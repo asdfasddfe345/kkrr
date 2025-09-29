@@ -39,7 +39,8 @@ export const JobCard: React.FC<JobCardProps> = ({
   onManualApply,
   onAutoApply,
   isAuthenticated,
-  onShowAuth
+  onShowAuth,
+  onCompleteProfile // NEW: Destructure the new prop
 }) => {
   const { user } = useAuth();
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -104,8 +105,7 @@ export const JobCard: React.FC<JobCardProps> = ({
 
     // Check if profile is complete for auto-apply
     if (!profileValidation?.isComplete) {
-    setError(`Profile incomplete for auto-apply. Missing: ${profileValidation?.missingFields.join(', ') || 'profile data'}`);
-
+      setError(`Profile incomplete for auto-apply. Missing: ${profileValidation?.missingFields.join(', ') || 'profile data'}`);
       return;
     }
 
