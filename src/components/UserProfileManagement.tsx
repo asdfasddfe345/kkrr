@@ -1,3 +1,4 @@
+```typescript
 // src/components/UserProfileManagement.tsx
 import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -184,7 +185,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [currentView, setCurrentView] = useState<'profile' | 'wallet'>(initialViewMode);
-  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [walletBalance, setWalletBalance] = useState<number>(0); // Stored in paise
   const [loadingWallet, setLoadingWallet] = useState(true);
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -205,7 +206,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
   const [showResumeUpload, setShowResumeUpload] = useState(false);
 
   const {
-    register, handleSubmit, reset, control,
+    register, handleSubmit, reset, control, setValue, // Destructure setValue here
     formState: { errors, isDirty },
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -220,24 +221,24 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
       education_details: user?.educationDetails || [],
       experience_details: user?.experienceDetails || [],
       skills_details: user?.skillsDetails || [],
-      projects_details: [],
-      certifications_details: [],
+      projects_details: [], // Projects and certifications are not directly on the user object yet,
+      certifications_details: [], // so they won't be pre-filled from `user` unless added to the AuthContext User type.
     },
   });
 
-  const { fields: educationFields, append: appendEducation, remove: removeEducation } = useFieldArray({
+  const { fields: educationFields, append: appendEducation, remove: removeEducation, update: updateEducationField } = useFieldArray({
     control, name: 'education_details',
   });
-  const { fields: experienceFields, append: appendExperience, remove: removeExperience, update: updateExperience } = useFieldArray({
+  const { fields: experienceFields, append: appendExperience, remove: removeExperience, update: updateExperienceField } = useFieldArray({
     control, name: "experience_details",
   });
-  const { fields: skillsFields, append: appendSkill, remove: removeSkill } = useFieldArray({
+  const { fields: skillsFields, append: appendSkill, remove: removeSkill, update: updateSkillField } = useFieldArray({
     control, name: 'skills_details',
   });
-  const { fields: projectFields, append: appendProject, remove: removeProject } = useFieldArray({
+  const { fields: projectFields, append: appendProject, remove: removeProject, update: updateProjectField } = useFieldArray({
     control, name: 'projects_details',
   });
-  const { fields: certificationFields, append: appendCertification, remove: removeCertification } = useFieldArray({
+  const { fields: certificationFields, append: appendCertification, remove: removeCertification, update: updateCertificationField } = useFieldArray({
     control, name: 'certifications_details',
   });
 
@@ -284,7 +285,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
     if (!user) return;
     setLoadingWallet(true);
     setTimeout(() => {
-      setWalletBalance(150.75);
+      setWalletBalance(15075); // Example: 150.75 INR in paise
       setLoadingWallet(false);
     }, 1000);
   };
@@ -306,7 +307,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
-    console.log("Saving profile data:", data);
+    console.log("Saving profile data:", data); // Log data being submitted
     setTimeout(async () => {
       try {
         await authService.updateUserProfile(user.id, data);
@@ -346,7 +347,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
   };
 
   const handleRedeemRequest = async () => {
-    if (parseFloat(redeemAmount) > walletBalance) {
+    if (parseFloat(redeemAmount) * 100 > walletBalance) { // Convert redeemAmount to paise for comparison
       setRedeemError('Amount exceeds balance.');
       return;
     }
@@ -374,7 +375,10 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
     setUploadError(null);
     setUploadSuccess(false);
     try {
+      console.log("handleResumeFileUpload: Calling parseResumeWithAI with text:", result.text);
       const resumeData: ResumeData = await paymentService.parseResumeWithAI(result.text, user.id);
+      console.log("handleResumeFileUpload: Received resumeData from AI:", resumeData);
+
       reset({
         full_name: resumeData.name || user.name,
         email_address: resumeData.email || user.email,
@@ -596,18 +600,18 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Responsibilities (Bullets)</label>
-                        {field.bullets.map((_, bulletIndex) => (
+                        {field.bullets.map((bullet, bulletIndex) => (
                              <div key={bulletIndex} className="flex space-x-2 mb-1">
                                 <input type="text" {...register(`experience_details.${index}.bullets.${bulletIndex}`)} className="input-base flex-1" />
                                 <button type="button" onClick={() => {
                                     const newBullets = field.bullets.filter((_, i) => i !== bulletIndex);
-                                    updateExperience(index, { ...field, bullets: newBullets });
+                                    updateExperienceField(index, { ...field, bullets: newBullets }); // Use updateExperienceField
                                 }} className="text-red-500 hover:text-red-700">
                                     <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>
                         ))}
-                         <button type="button" onClick={() => updateExperience(index, { ...field, bullets: [...field.bullets, ''] })} className="text-blue-600 hover:text-blue-700 text-sm mt-1">
+                         <button type="button" onClick={() => updateExperienceField(index, { ...field, bullets: [...field.bullets, ''] })} className="text-blue-600 hover:text-blue-700 text-sm mt-1">
                             + Add Bullet
                         </button>
                     </div>
@@ -679,22 +683,19 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Description (Bullets)</label>
-                        {field.bullets.map((_, bulletIndex) => (
+                        {field.bullets.map((bullet, bulletIndex) => (
                              <div key={bulletIndex} className="flex space-x-2 mb-1">
                                 <input type="text" {...register(`projects_details.${index}.bullets.${bulletIndex}`)} className="input-base flex-1" />
                                 <button type="button" onClick={() => {
                                     const newBullets = field.bullets.filter((_, i) => i !== bulletIndex);
-                                    // A bit of a workaround for react-hook-form's update typing
-                                    const currentProject = control._formValues.projects_details[index];
-                                    setValue(`projects_details.${index}`, { ...currentProject, bullets: newBullets });
+                                    updateProjectField(index, { ...field, bullets: newBullets }); // Use updateProjectField
                                 }} className="text-red-500 hover:text-red-700">
                                     <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>
                         ))}
                          <button type="button" onClick={() => {
-                             const currentProject = control._formValues.projects_details[index];
-                             setValue(`projects_details.${index}`, { ...currentProject, bullets: [...currentProject.bullets, ''] });
+                             updateProjectField(index, { ...field, bullets: [...field.bullets, ''] }); // Use updateProjectField
                          }} className="text-blue-600 hover:text-blue-700 text-sm mt-1">
                             + Add Bullet
                         </button>
@@ -770,18 +771,18 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
           </div>
         ) : (
           <div className="flex items-center justify-between">
-            <span className="text-4xl font-bold text-gray-900">₹{walletBalance.toFixed(2)}</span>
+            <span className="text-4xl font-bold text-gray-900">₹{(walletBalance / 100).toFixed(2)}</span>
             <button onClick={fetchWalletBalance} className="btn-secondary flex items-center space-x-2">
               <RefreshCw className="w-4 h-4" />
               <span>Refresh</span>
             </button>
           </div>
         )}
-        <button onClick={() => setShowRedeemModal(true)} disabled={walletBalance < 100} className="btn-primary w-full mt-4 flex items-center justify-center space-x-2">
+        <button onClick={() => setShowRedeemModal(true)} disabled={walletBalance < 10000} className="btn-primary w-full mt-4 flex items-center justify-center space-x-2"> {/* 10000 paise = 100 INR */}
           <Banknote className="w-5 h-5" />
           <span>Redeem Earnings</span>
         </button>
-        {walletBalance < 100 && (
+        {walletBalance < 10000 && (
           <p className="text-sm text-red-500 mt-2">Minimum balance for redemption is ₹100.</p>
         )}
       </div>
@@ -896,10 +897,10 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
               onChange={(e) => setRedeemAmount(e.target.value)}
               placeholder="Min ₹100"
               min="100"
-              max={walletBalance}
+              max={walletBalance / 100} // Max is walletBalance in Rupees
               className="input-base"
             />
-            <p className="text-xs text-gray-500 mt-1">Available: ₹{walletBalance.toFixed(2)}</p>
+            <p className="text-xs text-gray-500 mt-1">Available: ₹{(walletBalance / 100).toFixed(2)}</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Redemption Method</label>
@@ -997,4 +998,4 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
     </div>
   );
 };
-
+```
