@@ -1,4 +1,3 @@
-```typescript
 // src/components/jobs/JobCard.tsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -17,7 +16,8 @@ import {
   Globe,
   CheckCircle,
   AlertCircle,
-  Loader2
+  Loader2,
+  ArrowRight
 } from 'lucide-react';
 import { JobListing, AutoApplyResult, OptimizedResume } from '../../types/jobs';
 import { jobsService } from '../../services/jobsService';
@@ -324,17 +324,20 @@ export const JobCard: React.FC<JobCardProps> = ({
         
         {/* Profile Completion Warning */}
         {isAuthenticated && profileValidation && !profileValidation.isComplete && (
-          <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg dark:bg-orange-900/20 dark:border-orange-500/50">
+          <button
+            onClick={onCompleteProfile} // Make the warning clickable
+            className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg dark:bg-orange-900/20 dark:border-orange-500/50 w-full text-left flex items-center justify-between hover:bg-orange-100 transition-colors duration-200 group"
+          >
             <div className="flex items-center text-orange-700 dark:text-orange-300">
-              <AlertCircle className="w-4 h-4 mr-2" />
+              <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
               <span className="text-xs">
                 Complete your profile to enable auto-apply: {profileValidation.missingFields.join(', ')}
               </span>
             </div>
-          </div>
+            <ArrowRight className="w-4 h-4 text-orange-700 dark:text-orange-300 group-hover:translate-x-1 transition-transform duration-200" />
+          </button>
         )}
       </div>
     </motion.div>
   );
 };
-```
