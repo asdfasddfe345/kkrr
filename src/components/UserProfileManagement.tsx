@@ -1,7 +1,5 @@
-Looking at this React component file, I can see it's missing several closing brackets. Here's the corrected version with the missing brackets added:
-
-import React, { useState, useRef, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -11,58 +9,85 @@ import {
   Phone,
   Linkedin,
   Github,
-  Save,
-  Loader2,
-  CheckCircle,
-  AlertCircle,
-  Wallet,
-  CreditCard,
-  ArrowUpRight,
-  Banknote,
-  Copy,
-  Gift,
-  TrendingUp,
-  FileText,
-  Plus,
+  MapPin,
   Briefcase,
   GraduationCap,
-  Target,
+  Code,
   Award,
-  MapPin,
+  Sparkles,
+  Save,
+  Loader2,
+  AlertCircle,
+  Plus,
+  Trash2,
   ChevronDown,
   ChevronUp,
-  Trash2
+  Wallet,
+  DollarSign,
+  RefreshCw,
+  Send,
+  CheckCircle,
+  Info,
+  Copy,
+  ExternalLink,
+  Share2
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
+import { paymentService } from '../services/paymentService';
 import { supabase } from '../lib/supabaseClient';
+import { User as AuthUser } from '../types/auth';
 import { Education, WorkExperience, Skill, Project, Certification } from '../types/resume';
 
-// --- Zod Schema for Validation ---
+// Zod Schemas for nested objects
+const educationSchema = z.object({
+  degree: z.string().min(1, 'Degree is required'),
+  school: z.string().min(1, 'School is required'),
+  year: z.string().min(1, 'Year is required'),
+  cgpa: z.string().optional(),
+  location: z.string().optional(),
+});
+
+const workExperienceSchema = z.object({
+  role: z.string().min(1, 'Role is required'),
+  company: z.string().min(1, 'Company is required'),
+  year: z.string().min(1, 'Year is required'),
+  bullets: z.array(z.string().min(1, 'Bullet cannot be empty')).min(1, 'At least one bullet point is required'),
+});
+
+const projectSchema = z.object({
+  title: z.string().min(1, 'Project title is required'),
+  bullets: z.array(z.string().min(1, 'Bullet cannot be empty')).min(1, 'At least one bullet point is required'),
+  githubUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  demoUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+});
+
+const skillSchema = z.object({
+  category: z.string().min(1, 'Category is required'),
+  list: z.array(z.string().min(1, 'Skill cannot be empty')).min(1, 'At least one skill is required'),
+});
+
+const certificationSchema = z.object({
+  title: z.string().min(1, 'Certification title is required'),
+  description: z.string().optional(),
+  issuer: z.string().optional(),
+  year: z.string().optional(),
+});
+
+// Main Profile Schema
 const profileSchema = z.object({
-  full_name: z.string()
-    .min(2, 'Name must be at least 2 characters')
-    .max(50, 'Name must be less than 50 characters')
-    .regex(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces'),
-  email_address: z.string()
-    .email('Please enter a valid email address'),
-  phone: z.string()
-    .optional()
-    .refine((val) => !val || /^[\+]?[1-9][\d]{0,15}$/.test(val), {
-      message: 'Please enter a valid phone number',
-    }),
-  linkedin_profile: z.string()
-    .optional()
-    .refine((val) => !val || val.includes('linkedin.com'), {
-      message: 'Please enter a valid LinkedIn URL',
-    }),
-  github_profile: z.string()
-    .optional()
-    .refine((val) => !val || /^https:\/\/github\.com\/[a-zA-Z0-9_-]+$/.test(val), {
-      message: 'Please enter a valid GitHub URL (e.g., https://github.com/yourusername)',
-    }),
-  resume_headline: z.string().optional(),
-  current_location: z.string().optional(),
+  fullName: z.string().min(1, 'Full name is required'),
+  emailAddress: z.string().email('Invalid email address'),
+  phone: z.string().optional(),
+  linkedinProfileUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  githubProfileUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  resumeHeadline: z.string().optional(),
+  currentLocation: z.string().optional(),
+  educationDetails: z.array(educationSchema).optional(),
+  experienceDetails: z.array(workExperienceSchema).optional(),
+  skillsDetails: z.array(skillSchema).optional(),
+  projectsDetails: z.array(projectSchema).optional(),
+  certificationsDetails: z.array(certificationSchema).optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -72,7 +97,7 @@ interface UserProfileManagementProps {
   onClose: () => void;
   viewMode?: 'profile' | 'wallet';
   walletRefreshKey?: number;
-  setWalletRefreshKey?: React.Dispatch<React.SetStateAction<number>>; // Add setter prop
+  setWalletRefreshKey?: React.Dispatch<React.SetStateAction<number>>;
 }
 
 export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
@@ -80,1495 +105,863 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
   onClose,
   viewMode = 'profile',
   walletRefreshKey,
-  setWalletRefreshKey // Destructure setter prop
+  setWalletRefreshKey
 }) => {
-  console.log('UserProfileManagement: isOpen prop received:', isOpen); 
   const { user, revalidateUserSession, markProfilePromptSeen } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [walletBalance, setWalletBalance] = useState<number>(0);
-  const [pendingEarnings, setPendingEarnings] = useState<number>(0);
+  const [activeTab, setActiveTab] = useState<'profile' | 'wallet'>(viewMode);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number>(0); // In Rupees
+  const [loadingWallet, setLoadingWallet] = useState(true);
   const [showRedeemForm, setShowRedeemForm] = useState(false);
-  const [redeemMethod, setRedeemMethod] = useState<'upi' | 'bank_transfer'>('upi');
-  const [redeemDetails, setRedeemDetails] = useState({
-    upi_id: '',
-    bank_account: '',
-    ifsc_code: '',
-    account_holder_name: ''
-  });
+  const [redeemAmount, setRedeemAmount] = useState('');
+  const [redeemMethod, setRedeemMethod] = useState<'upi' | 'bank_transfer' | ''>('');
+  const [redeemDetails, setRedeemDetails] = useState('');
   const [isRedeeming, setIsRedeeming] = useState(false);
-  const [redeemSuccess, setRedeemSuccess] = useState(false);
+  const [redeemError, setRedeemError] = useState<string | null>(null);
+  const [redeemSuccess, setRedeemSuccess] = useState<string | null>(null);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [isGeneratingReferral, setIsGeneratingReferral] = useState(false);
+  const [referralError, setReferralError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
-
-  // NEW: State for resume details
-  const [education, setEducation] = useState<Education[]>([]);
-  const [workExperience, setWorkExperience] = useState<WorkExperience[]>([]);
-  const [skills, setSkills] = useState<Skill[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [certifications, setCertifications] = useState<(string | Certification)[]>([]);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['personal']));
-
-  // Helper functions for managing dynamic lists
-  const addEducation = () => {
-    setEducation([...education, { degree: '', school: '', year: '', cgpa: '', location: '' }]);
-  };
-
-  const removeEducation = (index: number) => {
-    if (education.length > 1) {
-      setEducation(education.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateEducation = (index: number, field: keyof Education, value: string) => {
-    const updated = [...education];
-    updated[index] = { ...updated[index], [field]: value };
-    setEducation(updated);
-  };
-
-  const addWorkExperience = () => {
-    setWorkExperience([...workExperience, { role: '', company: '', year: '', bullets: [''] }]);
-  };
-
-  const removeWorkExperience = (index: number) => {
-    if (workExperience.length > 1) {
-      setWorkExperience(workExperience.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateWorkExperience = (index: number, field: keyof WorkExperience, value: any) => {
-    const updated = [...workExperience];
-    updated[index] = { ...updated[index], [field]: value };
-    setWorkExperience(updated);
-  };
-
-  const addWorkBullet = (workIndex: number) => {
-    const updated = [...workExperience];
-    updated[workIndex].bullets.push('');
-    setWorkExperience(updated);
-  };
-
-  const updateWorkBullet = (workIndex: number, bulletIndex: number, value: string) => {
-    const updated = [...workExperience];
-    updated[workIndex].bullets[bulletIndex] = value;
-    setWorkExperience(updated);
-  };
-
-  const removeWorkBullet = (workIndex: number, bulletIndex: number) => {
-    const updated = [...workExperience];
-    if (updated[workIndex].bullets.length > 1) {
-      updated[workIndex].bullets.splice(bulletIndex, 1);
-      setWorkExperience(updated);
-    }
-  };
-
-  const addSkillCategory = () => {
-    setSkills([...skills, { category: '', count: 0, list: [] }]);
-  };
-
-  const removeSkillCategory = (index: number) => {
-    if (skills.length > 1) {
-      setSkills(skills.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateSkillCategory = (index: number, field: keyof Skill, value: any) => {
-    const updated = [...skills];
-    if (field === 'list') {
-      updated[index] = { ...updated[index], [field]: value, count: value.length };
-    } else {
-      updated[index] = { ...updated[index], [field]: value };
-    }
-    setSkills(updated);
-  };
-
-  const addSkillToCategory = (categoryIndex: number, skill: string) => {
-    if (skill.trim()) {
-      const updated = [...skills];
-      updated[categoryIndex].list.push(skill.trim());
-      updated[categoryIndex].count = updated[categoryIndex].list.length;
-      setSkills(updated);
-    }
-  };
-
-  const removeSkillFromCategory = (categoryIndex: number, skillIndex: number) => {
-    const updated = [...skills];
-    updated[categoryIndex].list.splice(skillIndex, 1);
-    updated[categoryIndex].count = updated[categoryIndex].list.length;
-    setSkills(updated);
-  };
-
-  const addProject = () => {
-    setProjects([...projects, { title: '', bullets: [''] }]);
-  };
-
-  const removeProject = (index: number) => {
-    if (projects.length > 1) {
-      setProjects(projects.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateProject = (index: number, field: keyof Project, value: any) => {
-    const updated = [...projects];
-    updated[index] = { ...updated[index], [field]: value };
-    setProjects(updated);
-  };
-
-  const addProjectBullet = (projectIndex: number) => {
-    const updated = [...projects];
-    updated[projectIndex].bullets.push('');
-    setProjects(updated);
-  };
-
-  const updateProjectBullet = (projectIndex: number, bulletIndex: number, value: string) => {
-    const updated = [...projects];
-    updated[projectIndex].bullets[bulletIndex] = value;
-    setProjects(updated);
-  };
-
-  const removeProjectBullet = (projectIndex: number, bulletIndex: number) => {
-    const updated = [...projects];
-    if (updated[projectIndex].bullets.length > 1) {
-      updated[projectIndex].bullets.splice(bulletIndex, 1);
-      setProjects(updated);
-    }
-  };
-
-  const addCertification = () => {
-    setCertifications([...certifications, '']);
-  };
-
-  const removeCertification = (index: number) => {
-    if (certifications.length > 1) {
-      setCertifications(certifications.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateCertification = (index: number, value: string | Certification) => {
-    const updated = [...certifications];
-    updated[index] = value;
-    setCertifications(updated);
-  };
-
-  const toggleSection = (sectionId: string) => {
-    const newExpanded = new Set(expandedSections);
-    if (newExpanded.has(sectionId)) {
-      newExpanded.delete(sectionId);
-    } else {
-      newExpanded.add(sectionId);
-    }
-    setExpandedSections(newExpanded);
-  };
-
-  // Function to fetch wallet data from Supabase
-  const fetchWalletData = async () => {
-    if (!user) return;
-    console.log('Fetching wallet data for user ID:', user.id);
-
-    try {
-      const { data: transactions, error } = await supabase
-        .from('wallet_transactions')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('Error fetching wallet data:', error);
-        return;
-      }
-      console.log('Raw fetched transactions:', transactions);
-
-      const completedTransactions = transactions?.filter(t => t.status === 'completed') || [];
-      console.log('Filtered completed transactions (for balance):', completedTransactions);
-
-      const balance = completedTransactions.reduce((sum, transaction) => sum + parseFloat(transaction.amount), 0);
-      setWalletBalance(Math.max(0, balance));
-      console.log('Calculated wallet balance:', balance);
-
-      const pendingTransactions = transactions?.filter(t => t.status === 'pending' && parseFloat(t.amount) > 0) || [];
-      console.log('Filtered pending transactions (for earnings):', pendingTransactions);
-
-      const pending = pendingTransactions.reduce((sum, transaction) => sum + parseFloat(transaction.amount), 0);
-      setPendingEarnings(pending);
-      console.log('Calculated pending earnings:', pending);
-
-    } catch (err) {
-      console.error('Error fetching wallet data:', err);
-    }
-  };
-
-  // Function to handle copying referral code to clipboard
-  const handleCopyReferralCode = async () => {
-    if (user?.referralCode) {
-      try {
-        await navigator.clipboard.writeText(user.referralCode);
-        setCopySuccess(true);
-        setTimeout(() => setCopySuccess(false), 2000);
-      } catch (err) {
-        console.error('Failed to copy referral code:', err);
-        const textArea = document.createElement('textarea');
-        textArea.value = user.referralCode;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        setCopySuccess(true);
-        setTimeout(() => setCopySuccess(false), 2000);
-      }
-    }
-  };
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['personal', 'social']));
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
     reset,
-    setValue
+    control,
+    formState: { errors, isDirty },
+    watch,
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
+    defaultValues: {
+      fullName: user?.name || '',
+      emailAddress: user?.email || '',
+      phone: user?.phone || '',
+      linkedinProfileUrl: user?.linkedin || '',
+      githubProfileUrl: user?.github || '',
+      resumeHeadline: user?.resumeHeadline || '',
+      currentLocation: user?.currentLocation || '',
+      educationDetails: user?.educationDetails || [],
+      experienceDetails: user?.experienceDetails || [],
+      skillsDetails: user?.skillsDetails || [],
+      projectsDetails: user?.projectsDetails || [],
+      certificationsDetails: user?.certificationsDetails || [],
+    },
   });
 
-  // Pre-fill form with current user data when modal opens or user changes
+  // Field arrays for dynamic lists
+  const { fields: educationFields, append: appendEducation, remove: removeEducation } = useFieldArray({
+    control,
+    name: 'educationDetails',
+  });
+  const { fields: experienceFields, append: appendExperience, remove: removeExperience } = useFieldArray({
+    control,
+    name: 'experienceDetails',
+  });
+  const { fields: skillsFields, append: appendSkill, remove: removeSkill } = useFieldArray({
+    control,
+    name: 'skillsDetails',
+  });
+  const { fields: projectsFields, append: appendProject, remove: removeProject } = useFieldArray({
+    control,
+    name: 'projectsDetails',
+  });
+  const { fields: certificationsFields, append: appendCertification, remove: removeCertification } = useFieldArray({
+    control,
+    name: 'certificationsDetails',
+  });
+
+  // Watch for changes in dynamic fields to update nested field arrays
+  const watchedEducation = watch('educationDetails');
+  const watchedExperience = watch('experienceDetails');
+  const watchedSkills = watch('skillsDetails');
+  const watchedProjects = watch('projectsDetails');
+  const watchedCertifications = watch('certificationsDetails');
+
   useEffect(() => {
-    if (user && isOpen) {
-      setValue('full_name', user.name);
-      setValue('email_address', user.email);
-      setValue('phone', user.phone || '');
-      setValue('linkedin_profile', user.linkedin || '');
-      setValue('github_profile', user.github || '');
-      setValue('resume_headline', user.resumeHeadline || '');
-      setValue('current_location', user.currentLocation || '');
-      
-      // Initialize resume details with existing data
-      setEducation(user.educationDetails || [{ degree: '', school: '', year: '', cgpa: '', location: '' }]);
-      setWorkExperience(user.experienceDetails || [{ role: '', company: '', year: '', bullets: [''] }]);
-      setSkills(user.skillsDetails || [{ category: '', count: 0, list: [] }]);
-      setProjects(user.projectsDetails || [{ title: '', bullets: [''] }]);
-      setCertifications(user.certificationsDetails || ['']);
-      
-      // Initial fetch when modal opens
-      fetchWalletData();
-    } else if (!isOpen) {
-        reset();
-        setError(null);
-        setSuccess(false);
-        setShowRedeemForm(false);
-        setRedeemSuccess(false);
-        // Reset resume details
-        setEducation([{ degree: '', school: '', year: '', cgpa: '', location: '' }]);
-        setWorkExperience([{ role: '', company: '', year: '', bullets: [''] }]);
-        setSkills([{ category: '', count: 0, list: [] }]);
-        setProjects([{ title: '', bullets: [''] }]);
-        setCertifications(['']);
-        setExpandedSections(new Set(['personal']));
+    if (isOpen && user) {
+      reset({
+        fullName: user.name || '',
+        emailAddress: user.email || '',
+        phone: user.phone || '',
+        linkedinProfileUrl: user.linkedin || '',
+        githubProfileUrl: user.github || '',
+        resumeHeadline: user.resumeHeadline || '',
+        currentLocation: user.currentLocation || '',
+        educationDetails: user.educationDetails || [],
+        experienceDetails: user.experienceDetails || [],
+        skillsDetails: user.skillsDetails || [],
+        projectsDetails: user.projectsDetails || [],
+        certificationsDetails: user.certificationsDetails || [],
+      });
+      setActiveTab(viewMode);
+      fetchWalletBalance();
+      setReferralCode(user.referralCode || null);
     }
-  }, [user, isOpen, setValue, reset]);
+  }, [isOpen, user, reset, viewMode, walletRefreshKey]);
 
-  // NEW useEffect: Listen for walletRefreshKey changes to refetch wallet data
-  useEffect(() => {
-    // Only fetch if the modal is open and the key actually changes (and user exists)
-    // Add walletRefreshKey !== undefined to prevent running on initial component mount if key is not provided yet
-    if (user && isOpen && walletRefreshKey !== undefined) {
-      console.log(`walletRefreshKey changed to ${walletRefreshKey}. Refetching wallet data.`);
-      fetchWalletData();
-    }
-  }, [walletRefreshKey, user, isOpen]); // Add user and isOpen as dependencies
-
-  // Effect for referral code generation
-  useEffect(() => {
-    const ensureReferralCode = async () => {
-      if (user && isOpen && !user.referralCode) {
-        console.log('User has no referral code, attempting to generate via Edge Function (fetch API)...');
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session) {
-            console.error('No active session found for referral code generation.');
-            setError('Authentication required to generate referral code.');
-            return;
-          }
-
-          const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-referral-code`;
-          if (!import.meta.env.VITE_SUPABASE_URL) {
-            throw new Error('VITE_SUPABASE_URL is not defined in your environment variables.');
-          }
-
-          const response = await fetch(edgeFunctionUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({ userId: user.id }),
-          });
-
-          const result = await response.json();
-
-          if (!response.ok) {
-            console.error('Error generating referral code via Edge Function:', result.error || response.statusText);
-            setError('Failed to generate referral code: ' + (result.error || response.statusText));
-          } else {
-            console.log('Referral code generated successfully via Edge Function:', result.referral_code);
-            await revalidateUserSession();
-          }
-        } catch (err) {
-          console.error('Fetch call to generate-referral-code Edge Function failed:', err);
-          setError('An unexpected error occurred during referral code generation.');
-        }
-      }
-    };
-
-    if (isOpen) {
-      ensureReferralCode();
-    }
-  }, [user, isOpen, revalidateUserSession]);
-
-
-  const onSubmit = async (data: ProfileFormData) => {
-    if (!user) {
-      setError('User not authenticated. Please log in again.');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    setSuccess(false);
-
+  const fetchWalletBalance = async () => {
+    if (!user) return;
+    setLoadingWallet(true);
     try {
-      // Filter out empty entries from arrays
-      const cleanedEducation = education.filter(edu => 
-        edu.degree.trim() && edu.school.trim() && edu.year.trim()
-      );
-      const cleanedWorkExperience = workExperience.filter(work => 
-        work.role.trim() && work.company.trim() && work.year.trim()
-      );
-      const cleanedSkills = skills.filter(skill => 
-        skill.category.trim() && skill.list.some(s => s.trim())
-      ).map(skill => ({
-        ...skill,
-        list: skill.list.filter(s => s.trim()),
-        count: skill.list.filter(s => s.trim()).length
-      }));
-      const cleanedProjects = projects.filter(project => 
-        project.title.trim() && project.bullets.some(b => b.trim())
-      ).map(project => ({
-        ...project,
-        bullets: project.bullets.filter(b => b.trim())
-      }));
-      const cleanedCertifications = certifications.filter(cert => {
-        if (typeof cert === 'string') {
-          return cert.trim();
-        }
-        return cert.title?.trim();
-      });
-
-      await authService.updateUserProfile(user.id, {
-        full_name: data.full_name,
-        email_address: data.email_address,
-        phone: data.phone || undefined,
-        linkedin_profile: data.linkedin_profile || undefined,
-        github_profile: data.github_profile || undefined,
-        resume_headline: data.resume_headline || undefined,
-        current_location: data.current_location || undefined,
-        education_details: cleanedEducation.length > 0 ? cleanedEducation : undefined,
-        experience_details: cleanedWorkExperience.length > 0 ? cleanedWorkExperience : undefined,
-        skills_details: cleanedSkills.length > 0 ? cleanedSkills : undefined,
-        projects_details: cleanedProjects.length > 0 ? cleanedProjects : undefined,
-        certifications_details: cleanedCertifications.length > 0 ? cleanedCertifications : undefined,
-      });
-
-      await revalidateUserSession();
-      await markProfilePromptSeen();
-
-      setSuccess(true);
-      
-      // Close the modal after successful update and state synchronization
-      onClose();
-
+      const { data: transactions, error } = await supabase
+        .from('wallet_transactions')
+        .select('amount, status')
+        .eq('user_id', user.id);
+      if (error) {
+        console.error('Error fetching wallet balance:', error);
+        return;
+      }
+      const completed = (transactions || []).filter((t: any) => t.status === 'completed');
+      const balance = completed.reduce((sum: number, tr: any) => sum + parseFloat(tr.amount), 0);
+      setWalletBalance(Math.max(0, balance));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile');
+      console.error('Error fetching wallet data:', err);
     } finally {
-      setIsLoading(false);
+      setLoadingWallet(false);
     }
   };
 
-  // Handle redemption submission
-  const handleRedeemSubmit = async () => {
-    if (!user) {
-      setError('User not authenticated. Please log in again.');
-      return;
-    }
-
-    if (walletBalance < 100) {
-      setError('Minimum redemption amount is ₹100.');
-      return;
-    }
-
-    let redemptionData: any;
-    if (redeemMethod === 'upi') {
-      if (!redeemDetails.upi_id) {
-        setError('UPI ID is required.');
-        return;
-      }
-      redemptionData = { method: 'upi', details: { upi_id: redeemDetails.upi_id } };
-    } else { // bank_transfer
-      if (!redeemDetails.account_holder_name || !redeemDetails.bank_account || !redeemDetails.ifsc_code) {
-        setError('All bank transfer details are required.');
-        return;
-      }
-      redemptionData = { method: 'bank_transfer', details: redeemDetails };
-    }
-
-    setIsRedeeming(true);
-    setError(null);
-    setRedeemSuccess(false);
+  const onSubmit = async (data: ProfileFormData) => {
+    if (!user) return;
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('No active session found for redemption.');
+      await authService.updateUserProfile(user.id, {
+        full_name: data.fullName,
+        email_address: data.emailAddress,
+        phone: data.phone,
+        linkedin_profile: data.linkedinProfileUrl,
+        github_profile: data.githubProfileUrl,
+        resume_headline: data.resumeHeadline,
+        current_location: data.currentLocation,
+        education_details: data.educationDetails,
+        experience_details: data.experienceDetails,
+        skills_details: data.skillsDetails,
+        projects_details: data.projectsDetails,
+        certifications_details: data.certificationsDetails,
+        has_seen_profile_prompt: true, // Mark prompt as seen after saving profile
+      });
+      await revalidateUserSession(); // Refresh user data in context
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+      markProfilePromptSeen(); // Ensure the prompt is marked as seen
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to update profile.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleRedeem = async () => {
+    if (!user) return;
+    setIsRedeeming(true);
+    setRedeemError(null);
+    setRedeemSuccess(null);
+
+    const amount = parseFloat(redeemAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setRedeemError('Please enter a valid amount.');
+      setIsRedeeming(false);
+      return;
+    }
+    if (amount > walletBalance) {
+      setRedeemError('Insufficient wallet balance.');
+      setIsRedeeming(false);
+      return;
+    }
+    if (amount < 100) {
+      setRedeemError('Minimum redemption amount is ₹100.');
+      setIsRedeeming(false);
+      return;
+    }
+    if (!redeemMethod) {
+      setRedeemError('Please select a redemption method.');
+      setIsRedeeming(false);
+      return;
+    }
+    if (!redeemDetails.trim()) {
+      setRedeemError('Please provide redemption details (e.g., UPI ID or Bank Account No.).');
+      setIsRedeeming(false);
+      return;
+    }
+
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session || !session.access_token) {
+        throw new Error('No active session found. Please log in again.');
       }
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/redeem-balance`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-redemption-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          user_id: user.id,
-          amount: walletBalance,
-          method: redemptionData.method,
-          details: redemptionData.details,
+          userId: user.id,
+          amount: amount,
+          redeemMethod: redeemMethod,
+          redeemDetails: redeemDetails,
         }),
       });
-      
-      const result = await response.json();
 
+      const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || response.statusText);
+        throw new Error(result.error || 'Failed to submit redemption request.');
       }
 
-      setWalletBalance(0);
-      setPendingEarnings(prev => prev + walletBalance);
-
-      setRedeemSuccess(true);
+      setRedeemSuccess(result.message);
+      setRedeemAmount('');
+      setRedeemMethod('');
+      setRedeemDetails('');
       setShowRedeemForm(false);
-
-      setTimeout(() => {
-        setRedeemSuccess(false);
-      }, 5000);
-
-      // Re-fetch wallet data to ensure it's fully up-to-date after redemption
-      fetchWalletData();
-
+      fetchWalletBalance(); // Refresh balance after redemption
+      if (setWalletRefreshKey) {
+        setWalletRefreshKey(prev => prev + 1);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit redemption request.');
-      console.error('Redemption error:', err);
+      setRedeemError(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {
       setIsRedeeming(false);
     }
   };
 
+  const handleGenerateReferralCode = async () => {
+    if (!user) return;
+    setIsGeneratingReferral(true);
+    setReferralError(null);
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session || !session.access_token) {
+        throw new Error('No active session found. Please log in again.');
+      }
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-referral-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to generate referral code.');
+      }
+      setReferralCode(result.referralCode);
+    } catch (err) {
+      setReferralError(err instanceof Error ? err.message : 'An unexpected error occurred.');
+    } finally {
+      setIsGeneratingReferral(false);
     }
+  };
+
+  const handleCopyReferralCode = async () => {
+    if (referralCode) {
+      try {
+        await navigator.clipboard.writeText(referralCode);
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy referral code:', err);
+      }
+    }
+  };
+
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(sectionId)) {
+        newSet.delete(sectionId);
+      } else {
+        newSet.add(sectionId);
+      }
+      return newSet;
+    });
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm dark:bg-black/80" onClick={handleBackdropClick}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] overflow-y-auto dark:bg-dark-100 dark:shadow-dark-xl">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-2 sm:p-4 backdrop-blur-sm dark:bg-black/80">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto flex flex-col dark:bg-dark-100 dark:shadow-dark-xl">
         {/* Header */}
-        <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 p-6 border-b border-gray-200 dark:from-dark-200 dark:to-dark-300 dark:border-dark-400">
+        <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 px-3 sm:px-6 py-4 sm:py-8 border-b border-gray-100 flex-shrink-0 dark:from-dark-200 dark:to-dark-300 dark:border-dark-400">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-white/50 min-w-[44px] min-h-[44px] dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-dark-300/50"
+            className="absolute top-2 sm:top-4 right-2 sm:right-4 w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-white/50 z-10 min-w-[44px] min-h-[44px] dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-dark-300/50"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
 
-          <div className="text-center">
-            <div className="bg-gradient-to-br from-neon-cyan-500 to-neon-blue-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg dark:shadow-neon-cyan">
-              {viewMode === 'profile' ? <User className="w-8 h-8 text-white" /> : <Wallet className="w-8 h-8 text-white" />}
+          <div className="text-center max-w-4xl mx-auto px-8">
+            <div className="bg-gradient-to-br from-neon-cyan-500 to-neon-blue-500 w-12 h-12 sm:w-20 sm:h-20 rounded-xl sm:rounded-3xl flex items-center justify-center mx-auto mb-3 sm:mb-6 shadow-lg dark:shadow-neon-cyan">
+              {activeTab === 'profile' ? (
+                <User className="w-6 h-6 sm:w-10 h-10 text-white" />
+              ) : (
+                <Wallet className="w-6 h-6 sm:w-10 h-10 text-white" />
+              )}
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-              {viewMode === 'profile' ? 'Profile Settings' : 'Referral & Wallet'}
+            <h1 className="text-lg sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2 sm:mb-3">
+              {activeTab === 'profile' ? 'Manage Your Profile' : 'Referral & Wallet'}
             </h1>
-            <p className="text-gray-600 dark:text-gray-300">
-              {viewMode === 'profile' ? 'Update your personal information and social profiles' : 'Manage your earnings and referral program'}
+            <p className="text-sm sm:text-lg lg:text-xl text-gray-600 dark:text-gray-300 mb-3 sm:mb-6">
+              {activeTab === 'profile' ? 'Update your personal and resume details' : 'Earn and redeem rewards'}
             </p>
           </div>
         </div>
 
+        {/* Tabs */}
+        <div className="flex-shrink-0 border-b border-gray-200 dark:border-dark-300">
+          <div className="flex justify-center -mb-px">
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`py-3 px-6 text-sm font-medium transition-colors duration-200 ${
+                activeTab === 'profile'
+                  ? 'border-b-2 border-blue-600 text-blue-600 dark:border-neon-cyan-400 dark:text-neon-cyan-400'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              }`}
+            >
+              Profile Details
+            </button>
+            <button
+              onClick={() => setActiveTab('wallet')}
+              className={`py-3 px-6 text-sm font-medium transition-colors duration-200 ${
+                activeTab === 'wallet'
+                  ? 'border-b-2 border-blue-600 text-blue-600 dark:border-neon-cyan-400 dark:text-neon-cyan-400'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              }`}
+            >
+              Wallet & Referrals
+            </button>
+          </div>
+        </div>
+
         {/* Content */}
-        <div className="p-6">
-          {/* Inline Success Message */}
-          {success && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl dark:bg-neon-cyan-500/10 dark:border-neon-cyan-400/50">
-              <div className="flex items-start">
-                <CheckCircle className="w-5 h-5 text-green-600 dark:text-neon-cyan-400 mr-3 flex-shrink-0 mt-0.5" />
-                <p className="text-green-700 dark:text-neon-cyan-300 text-sm font-medium">Profile updated successfully!</p>
-              </div>
-            </div>
-          )}
-
-          {/* Redemption Success Message */}
-          {redeemSuccess && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl dark:bg-neon-blue-500/10 dark:border-neon-blue-400/50">
-              <div className="flex items-start">
-                <CheckCircle className="w-5 h-5 text-blue-600 dark:text-neon-blue-400 mr-3 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-blue-700 dark:text-neon-blue-300 text-sm font-medium">Redemption request submitted successfully!</p>
-                  <p className="text-blue-600 dark:text-neon-blue-400 text-xs mt-1">The money will be credited to your account within 2 hours. We understand.</p>
-                </div>
-              </div>
-            </div>
-          )}
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl dark:bg-red-900/20 dark:border-red-500/50">
-              <div className="flex items-start">
-                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 mt-0.5" />
-                <p className="text-red-700 dark:text-red-300 text-sm font-medium">{error}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Conditional rendering based on viewMode */}
-          {viewMode === 'profile' && (
+        <div className="p-3 sm:p-6 overflow-y-auto flex-1">
+          {activeTab === 'profile' && (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* Personal Information Section */}
-              <div className="space-y-6">
-                <button
-                  type="button"
-                  onClick={() => toggleSection('personal')}
-                  className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors dark:bg-dark-200 dark:hover:bg-dark-300"
-                >
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                    <User className="w-5 h-5 mr-2 text-blue-600 dark:text-neon-cyan-400" />
-                    Personal Information
-                  </h3>
-                  {expandedSections.has('personal') ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                </button>
+              {saveError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start dark:bg-red-900/20 dark:border-red-500/50">
+                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 mt-0.5" />
+                  <p className="text-red-700 dark:text-red-300 text-sm font-medium">{saveError}</p>
+                </div>
+              )}
+              {saveSuccess && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-start dark:bg-neon-cyan-500/10 dark:border-neon-cyan-400/50">
+                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-neon-cyan-400 mr-3 mt-0.5" />
+                  <p className="text-green-700 dark:text-neon-cyan-300 text-sm font-medium">Profile updated successfully!</p>
+                </div>
+              )}
 
+              {/* Personal Information */}
+              <div className="card">
+                <button type="button" onClick={() => toggleSection('personal')} className="w-full flex justify-between items-center p-4 sm:p-6 font-semibold text-lg text-gray-900 dark:text-gray-100">
+                  <div className="flex items-center space-x-3">
+                    <User className="w-5 h-5 text-blue-600 dark:text-neon-cyan-400" />
+                    <span>Personal Information</span>
+                  </div>
+                  {expandedSections.has('personal') ? <ChevronUp /> : <ChevronDown />}
+                </button>
                 {expandedSections.has('personal') && (
-                <div className="space-y-4 pl-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Full Name */}
+                  <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-dark-300 space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Full Name <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <User className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                        </div>
-                        <input
-                          {...register('full_name')}
-                          type="text"
-                          placeholder="Enter your full name"
-                          className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-neon-cyan-500 focus:border-neon-cyan-500 transition-all duration-200 dark:bg-dark-200 dark:text-gray-100 ${
-                            errors.full_name ? 'border-red-300 bg-red-50 dark:border-red-500 dark:bg-red-900/20' : 'border-gray-300 bg-gray-50 focus:bg-white dark:border-dark-300 dark:focus:bg-dark-100'
-                          }`}
-                        />
-                      </div>
-                      {errors.full_name && (
-                        <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
-                          <AlertCircle className="w-4 h-4 mr-1" />
-                          {errors.full_name.message}
-                        </p>
-                      )}
+                      <label className="input-label">Full Name</label>
+                      <input type="text" {...register('fullName')} className="input-base" />
+                      {errors.fullName && <p className="input-error">{errors.fullName.message}</p>}
                     </div>
-
-                    {/* Email */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Email Address <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Mail className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                        </div>
-                        <input
-                          {...register('email_address')}
-                          type="email"
-                          placeholder="your.email@example.com"
-                          className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-neon-cyan-500 focus:border-neon-cyan-500 transition-all duration-200 dark:bg-dark-200 dark:text-gray-100 ${
-                            errors.email_address ? 'border-red-300 bg-red-50 dark:border-red-500 dark:bg-red-900/20' : 'border-gray-300 bg-gray-50 focus:bg-white dark:border-dark-300 dark:focus:bg-dark-100'
-                          }`}
-                        />
-                      </div>
-                      {errors.email_address && (
-                        <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
-                          <AlertCircle className="w-4 h-4 mr-1" />
-                          {errors.email_address.message}
-                        </p>
-                      )}
+                      <label className="input-label">Email Address</label>
+                      <input type="email" {...register('emailAddress')} className="input-base" disabled />
+                      {errors.emailAddress && <p className="input-error">{errors.emailAddress.message}</p>}
                     </div>
-
-                    {/* Phone */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Phone Number
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Phone className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                        </div>
-                        <input
-                          {...register('phone')}
-                          type="tel"
-                          placeholder="+1 (555) 123-4567"
-                          className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-neon-cyan-500 focus:border-neon-cyan-500 transition-all duration-200 dark:bg-dark-200 dark:text-gray-100 ${
-                            errors.phone ? 'border-red-300 bg-red-50 dark:border-red-500 dark:bg-red-900/20' : 'border-gray-300 bg-gray-50 focus:bg-white dark:border-dark-300 dark:focus:bg-dark-100'
-                          }`}
-                        />
-                      </div>
-                      {errors.phone && (
-                        <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
-                          <AlertCircle className="w-4 h-4 mr-1" />
-                          {errors.phone.message}
-                        </p>
-                      )}
+                      <label className="input-label">Phone Number</label>
+                      <input type="tel" {...register('phone')} className="input-base" />
+                      {errors.phone && <p className="input-error">{errors.phone.message}</p>}
                     </div>
-
-                    {/* Current Location */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Current Location
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <MapPin className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                        </div>
-                        <input
-                          {...register('current_location')}
-                          type="text"
-                          placeholder="City, State/Country"
-                          className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-neon-cyan-500 focus:border-neon-cyan-500 transition-all duration-200 dark:bg-dark-200 dark:text-gray-100 border-gray-300 bg-gray-50 focus:bg-white dark:border-dark-300 dark:focus:bg-dark-100"
-                        />
-                      </div>
+                      <label className="input-label">Resume Headline / Career Objective</label>
+                      <textarea {...register('resumeHeadline')} className="input-base h-24" placeholder="e.g., Experienced Software Engineer | AI/ML Enthusiast"></textarea>
+                      {errors.resumeHeadline && <p className="input-error">{errors.resumeHeadline.message}</p>}
+                    </div>
+                    <div>
+                      <label className="input-label">Current Location</label>
+                      <input type="text" {...register('currentLocation')} className="input-base" placeholder="e.g., Bangalore, India" />
+                      {errors.currentLocation && <p className="input-error">{errors.currentLocation.message}</p>}
                     </div>
                   </div>
-
-                  {/* Resume Headline */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Professional Summary / Career Objective
-                    </label>
-                    <textarea
-                      {...register('resume_headline')}
-                      placeholder="Brief professional summary or career objective..."
-                      className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-neon-cyan-500 focus:border-neon-cyan-500 transition-all duration-200 dark:bg-dark-200 dark:text-gray-100 border-gray-300 bg-gray-50 focus:bg-white dark:border-dark-300 dark:focus:bg-dark-100 h-24 resize-none"
-                    />
-                  </div>
-                </div>
                 )}
               </div>
 
-              {/* Social Profiles Section */}
-              <div className="space-y-4">
-                <button
-                  type="button"
-                  onClick={() => toggleSection('social')}
-                  className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors dark:bg-dark-200 dark:hover:bg-dark-300"
-                >
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                    <Linkedin className="w-5 h-5 mr-2 text-blue-600 dark:text-neon-cyan-400" />
-                    Social Profiles
-                  </h3>
-                  {expandedSections.has('social') ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+              {/* Social Profiles */}
+              <div className="card">
+                <button type="button" onClick={() => toggleSection('social')} className="w-full flex justify-between items-center p-4 sm:p-6 font-semibold text-lg text-gray-900 dark:text-gray-100">
+                  <div className="flex items-center space-x-3">
+                    <Linkedin className="w-5 h-5 text-purple-600 dark:text-neon-purple-400" />
+                    <span>Social Profiles</span>
+                  </div>
+                  {expandedSections.has('social') ? <ChevronUp /> : <ChevronDown />}
                 </button>
-
                 {expandedSections.has('social') && (
-                <div className="space-y-4 pl-4">
-                  {/* LinkedIn */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      LinkedIn Profile URL
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Linkedin className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                      </div>
-                      <input
-                        {...register('linkedin_profile')}
-                        type="url"
-                        placeholder="https://linkedin.com/in/yourprofile"
-                        className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-neon-cyan-500 focus:border-neon-cyan-500 transition-all duration-200 dark:bg-dark-200 dark:text-gray-100 ${
-                          errors.linkedin_profile ? 'border-red-300 bg-red-50 dark:border-red-500 dark:bg-red-900/20' : 'border-gray-300 bg-gray-50 focus:bg-white dark:border-dark-300 dark:focus:bg-dark-100'
-                        }`}
-                      />
+                  <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-dark-300 space-y-4">
+                    <div>
+                      <label className="input-label">LinkedIn Profile URL</label>
+                      <input type="url" {...register('linkedinProfileUrl')} className="input-base" />
+                      {errors.linkedinProfileUrl && <p className="input-error">{errors.linkedinProfileUrl.message}</p>}
                     </div>
-                    {errors.linkedin_profile && (
-                      <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
-                        <AlertCircle className="w-4 h-4 mr-1" />
-                        {errors.linkedin_profile.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* GitHub */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      GitHub Profile URL
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Github className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                      </div>
-                      <input
-                        {...register('github_profile')}
-                        type="url"
-                        placeholder="https://github.com/yourusername"
-                        className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-neon-cyan-500 focus:border-neon-cyan-500 transition-all duration-200 dark:bg-dark-200 dark:text-gray-100 ${
-                          errors.github_profile ? 'border-red-300 bg-red-50 dark:border-red-500 dark:bg-red-900/20' : 'border-gray-300 bg-gray-50 focus:bg-white dark:border-dark-300 dark:focus:bg-dark-100'
-                        }`}
-                      />
+                    <div>
+                      <label className="input-label">GitHub Profile URL</label>
+                      <input type="url" {...register('githubProfileUrl')} className="input-base" />
+                      {errors.githubProfileUrl && <p className="input-error">{errors.githubProfileUrl.message}</p>}
                     </div>
-                    {errors.github_profile && (
-                      <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
-                        <AlertCircle className="w-4 h-4 mr-1" />
-                        {errors.github_profile.message}
-                      </p>
-                    )}
                   </div>
-                </div>
                 )}
               </div>
 
-              {/* Education Section */}
-              <div className="space-y-4">
-                <button
-                  type="button"
-                  onClick={() => toggleSection('education')}
-                  className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors dark:bg-dark-200 dark:hover:bg-dark-300"
-                >
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                    <GraduationCap className="w-5 h-5 mr-2 text-blue-600 dark:text-neon-cyan-400" />
-                    Education
-                  </h3>
-                  {expandedSections.has('education') ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+              {/* Education */}
+              <div className="card">
+                <button type="button" onClick={() => toggleSection('education')} className="w-full flex justify-between items-center p-4 sm:p-6 font-semibold text-lg text-gray-900 dark:text-gray-100">
+                  <div className="flex items-center space-x-3">
+                    <GraduationCap className="w-5 h-5 text-green-600 dark:text-neon-green-400" />
+                    <span>Education</span>
+                  </div>
+                  {expandedSections.has('education') ? <ChevronUp /> : <ChevronDown />}
                 </button>
-
                 {expandedSections.has('education') && (
-                <div className="space-y-4 pl-4">
-                  {education.map((edu, index) => (
-                    <div key={index} className="border border-gray-200 rounded-xl p-4 space-y-4 dark:border-dark-300">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-gray-900 dark:text-gray-100">Education #{index + 1}</h4>
-                        {education.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeEducation(index)}
-                            className="text-red-600 hover:text-red-700 p-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
+                  <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-dark-300 space-y-4">
+                    {educationFields.map((field, index) => (
+                      <div key={field.id} className="border border-gray-200 rounded-lg p-3 space-y-3 dark:border-dark-400">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100">Education #{index + 1}</h4>
+                          <button type="button" onClick={() => removeEducation(index)} className="text-red-600 hover:text-red-700">
+                            <Trash2 className="w-5 h-5" />
                           </button>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Degree</label>
-                          <input
-                            type="text"
-                            value={edu.degree}
-                            onChange={(e) => updateEducation(index, 'degree', e.target.value)}
-                            placeholder="Bachelor of Technology"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                          />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Institution</label>
-                          <input
-                            type="text"
-                            value={edu.school}
-                            onChange={(e) => updateEducation(index, 'school', e.target.value)}
-                            placeholder="University Name"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                          />
+                          <label className="input-label">Degree</label>
+                          <input type="text" {...register(`educationDetails.${index}.degree`)} className="input-base" />
+                          {errors.educationDetails?.[index]?.degree && <p className="input-error">{errors.educationDetails[index]?.degree?.message}</p>}
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Year</label>
-                          <input
-                            type="text"
-                            value={edu.year}
-                            onChange={(e) => updateEducation(index, 'year', e.target.value)}
-                            placeholder="2020-2024"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                          />
+                          <label className="input-label">School/University</label>
+                          <input type="text" {...register(`educationDetails.${index}.school`)} className="input-base" />
+                          {errors.educationDetails?.[index]?.school && <p className="input-error">{errors.educationDetails[index]?.school?.message}</p>}
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CGPA/GPA</label>
-                          <input
-                            type="text"
-                            value={edu.cgpa || ''}
-                            onChange={(e) => updateEducation(index, 'cgpa', e.target.value)}
-                            placeholder="8.5/10"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                          />
+                          <label className="input-label">Year</label>
+                          <input type="text" {...register(`educationDetails.${index}.year`)} className="input-base" placeholder="e.g., 2020-2024" />
+                          {errors.educationDetails?.[index]?.year && <p className="input-error">{errors.educationDetails[index]?.year?.message}</p>}
+                        </div>
+                        <div>
+                          <label className="input-label">CGPA (Optional)</label>
+                          <input type="text" {...register(`educationDetails.${index}.cgpa`)} className="input-base" />
+                        </div>
+                        <div>
+                          <label className="input-label">Location (Optional)</label>
+                          <input type="text" {...register(`educationDetails.${index}.location`)} className="input-base" />
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={addEducation}
-                    className="w-full border-2 border-dashed border-gray-300 rounded-xl p-4 text-gray-600 hover:text-gray-800 hover:border-gray-400 transition-colors flex items-center justify-center"
-                  >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Add Another Education
-                  </button>
-                </div>
+                    ))}
+                    <button type="button" onClick={() => appendEducation({ degree: '', school: '', year: '' })} className="btn-secondary w-full flex items-center justify-center space-x-2">
+                      <Plus className="w-5 h-5" /> <span>Add Education</span>
+                    </button>
+                  </div>
                 )}
               </div>
 
-              {/* Skills Section */}
-              <div className="space-y-4">
-                <button
-                  type="button"
-                  onClick={() => toggleSection('skills')}
-                  className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors dark:bg-dark-200 dark:hover:bg-dark-300"
-                >
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                    <Target className="w-5 h-5 mr-2 text-blue-600 dark:text-neon-cyan-400" />
-                    Skills
-                  </h3>
-                  {expandedSections.has('skills') ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+              {/* Work Experience */}
+              <div className="card">
+                <button type="button" onClick={() => toggleSection('experience')} className="w-full flex justify-between items-center p-4 sm:p-6 font-semibold text-lg text-gray-900 dark:text-gray-100">
+                  <div className="flex items-center space-x-3">
+                    <Briefcase className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                    <span>Work Experience</span>
+                  </div>
+                  {expandedSections.has('experience') ? <ChevronUp /> : <ChevronDown />}
                 </button>
-
-                {expandedSections.has('skills') && (
-                <div className="space-y-4 pl-4">
-                  {skills.map((skillCategory, index) => (
-                    <div key={index} className="border border-gray-200 rounded-xl p-4 space-y-4 dark:border-dark-300">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-gray-900 dark:text-gray-100">Skill Category #{index + 1}</h4>
-                        {skills.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeSkillCategory(index)}
-                            className="text-red-600 hover:text-red-700 p-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Category Name</label>
-                        <input
-                          type="text"
-                          value={skillCategory.category}
-                          onChange={(e) => updateSkillCategory(index, 'category', e.target.value)}
-                          placeholder="e.g., Programming Languages, Frameworks"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Skills</label>
-                        <div className="flex flex-wrap gap-2 mb-2 min-h-[40px] p-2 border border-gray-300 rounded-lg dark:border-dark-300">
-                          {skillCategory.list.map((skill, skillIndex) => (
-                            <span
-                              key={skillIndex}
-                              className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
-                            >
-                              {skill}
-                              <button
-                                type="button"
-                                onClick={() => removeSkillFromCategory(index, skillIndex)}
-                                className="ml-2 text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            placeholder="Add a skill and press Enter"
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                const input = e.target as HTMLInputElement;
-                                if (input.value.trim()) {
-                                  addSkillToCategory(index, input.value.trim());
-                                  input.value = '';
-                                }
-                              }
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              const input = (e.target as HTMLButtonElement).previousElementSibling as HTMLInputElement;
-                              if (input.value.trim()) {
-                                addSkillToCategory(index, input.value.trim());
-                                input.value = '';
-                              }
-                            }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-                          >
-                            Add
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={addSkillCategory}
-                    className="w-full border-2 border-dashed border-gray-300 rounded-xl p-4 text-gray-600 hover:text-gray-800 hover:border-gray-400 transition-colors flex items-center justify-center"
-                  >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Add Skill Category
-                  </button>
-                </div>
-                )}
-              </div>
-
-              {/* Work Experience Section */}
-              <div className="space-y-4">
-                <button
-                  type="button"
-                  onClick={() => toggleSection('experience')}
-                  className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors dark:bg-dark-200 dark:hover:bg-dark-300"
-                >
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                    <Briefcase className="w-5 h-5 mr-2 text-blue-600 dark:text-neon-cyan-400" />
-                    Work Experience
-                  </h3>
-                  {expandedSections.has('experience') ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                </button>
-
                 {expandedSections.has('experience') && (
-                <div className="space-y-4 pl-4">
-                  {workExperience.map((work, index) => (
-                    <div key={index} className="border border-gray-200 rounded-xl p-4 space-y-4 dark:border-dark-300">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-gray-900 dark:text-gray-100">Experience #{index + 1}</h4>
-                        {workExperience.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeWorkExperience(index)}
-                            className="text-red-600 hover:text-red-700 p-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
+                  <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-dark-300 space-y-4">
+                    {experienceFields.map((field, index) => (
+                      <div key={field.id} className="border border-gray-200 rounded-lg p-3 space-y-3 dark:border-dark-400">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100">Experience #{index + 1}</h4>
+                          <button type="button" onClick={() => removeExperience(index)} className="text-red-600 hover:text-red-700">
+                            <Trash2 className="w-5 h-5" />
                           </button>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Job Title</label>
-                          <input
-                            type="text"
-                            value={work.role}
-                            onChange={(e) => updateWorkExperience(index, 'role', e.target.value)}
-                            placeholder="Software Engineer"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                          />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Company</label>
-                          <input
-                            type="text"
-                            value={work.company}
-                            onChange={(e) => updateWorkExperience(index, 'company', e.target.value)}
-                            placeholder="TechCorp Inc."
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                          />
+                          <label className="input-label">Role</label>
+                          <input type="text" {...register(`experienceDetails.${index}.role`)} className="input-base" />
+                          {errors.experienceDetails?.[index]?.role && <p className="input-error">{errors.experienceDetails[index]?.role?.message}</p>}
                         </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Duration</label>
-                          <input
-                            type="text"
-                            value={work.year}
-                            onChange={(e) => updateWorkExperience(index, 'year', e.target.value)}
-                            placeholder="Jan 2023 - Present"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                          />
+                        <div>
+                          <label className="input-label">Company</label>
+                          <input type="text" {...register(`experienceDetails.${index}.company`)} className="input-base" />
+                          {errors.experienceDetails?.[index]?.company && <p className="input-error">{errors.experienceDetails[index]?.company?.message}</p>}
                         </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Key Responsibilities</label>
-                        {work.bullets.map((bullet, bulletIndex) => (
-                          <div key={bulletIndex} className="flex gap-2 mb-2">
-                            <input
-                              type="text"
-                              value={bullet}
-                              onChange={(e) => updateWorkBullet(index, bulletIndex, e.target.value)}
-                              placeholder="Describe your responsibility/achievement"
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                            />
-                            {work.bullets.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeWorkBullet(index, bulletIndex)}
-                                className="text-red-600 hover:text-red-700 p-2"
-                              >
-                                <X className="w-4 h-4" />
+                        <div>
+                          <label className="input-label">Year</label>
+                          <input type="text" {...register(`experienceDetails.${index}.year`)} className="input-base" placeholder="e.g., Jan 2023 - Present" />
+                          {errors.experienceDetails?.[index]?.year && <p className="input-error">{errors.experienceDetails[index]?.year?.message}</p>}
+                        </div>
+                        <div>
+                          <label className="input-label">Responsibilities/Achievements (Bullet Points)</label>
+                          {watchedExperience?.[index]?.bullets?.map((bullet, bulletIndex) => (
+                            <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
+                              <input type="text" {...register(`experienceDetails.${index}.bullets.${bulletIndex}`)} className="input-base flex-grow" />
+                              <button type="button" onClick={() => {
+                                const currentBullets = watchedExperience[index].bullets;
+                                if (currentBullets.length > 1) {
+                                  const newBullets = currentBullets.filter((_, i) => i !== bulletIndex);
+                                  // Manually update the form state for the specific field
+                                  reset(prev => ({
+                                    ...prev,
+                                    experienceDetails: prev.experienceDetails?.map((exp, expIdx) =>
+                                      expIdx === index ? { ...exp, bullets: newBullets } : exp
+                                    )
+                                  }));
+                                }
+                              }} className="text-red-600 hover:text-red-700">
+                                <Trash2 className="w-5 h-5" />
                               </button>
-                            )}
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => addWorkBullet(index)}
-                          className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center"
-                        >
-                          <Plus className="w-4 h-4 mr-1" />
-                          Add Responsibility
-                        </button>
+                            </div>
+                          ))}
+                          <button type="button" onClick={() => {
+                            const currentBullets = watchedExperience?.[index]?.bullets || [];
+                            reset(prev => ({
+                              ...prev,
+                              experienceDetails: prev.experienceDetails?.map((exp, expIdx) =>
+                                expIdx === index ? { ...exp, bullets: [...currentBullets, ''] } : exp
+                              )
+                            }));
+                          }} className="btn-secondary btn-sm flex items-center space-x-1 mt-2">
+                            <Plus className="w-4 h-4" /> <span>Add Bullet</span>
+                          </button>
+                          {errors.experienceDetails?.[index]?.bullets && <p className="input-error">{errors.experienceDetails[index]?.bullets?.message}</p>}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={addWorkExperience}
-                    className="w-full border-2 border-dashed border-gray-300 rounded-xl p-4 text-gray-600 hover:text-gray-800 hover:border-gray-400 transition-colors flex items-center justify-center"
-                  >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Add Work Experience
-                  </button>
-                </div>
+                    ))}
+                    <button type="button" onClick={() => appendExperience({ role: '', company: '', year: '', bullets: [''] })} className="btn-secondary w-full flex items-center justify-center space-x-2">
+                      <Plus className="w-5 h-5" /> <span>Add Experience</span>
+                    </button>
+                  </div>
                 )}
               </div>
 
-              {/* Projects Section */}
-              <div className="space-y-4">
-                <button
-                  type="button"
-                  onClick={() => toggleSection('projects')}
-                  className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors dark:bg-dark-200 dark:hover:bg-dark-300"
-                >
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                    <FileText className="w-5 h-5 mr-2 text-blue-600 dark:text-neon-cyan-400" />
-                    Projects
-                  </h3>
-                  {expandedSections.has('projects') ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+              {/* Projects */}
+              <div className="card">
+                <button type="button" onClick={() => toggleSection('projects')} className="w-full flex justify-between items-center p-4 sm:p-6 font-semibold text-lg text-gray-900 dark:text-gray-100">
+                  <div className="flex items-center space-x-3">
+                    <Code className="w-5 h-5 text-blue-600 dark:text-neon-cyan-400" />
+                    <span>Projects</span>
+                  </div>
+                  {expandedSections.has('projects') ? <ChevronUp /> : <ChevronDown />}
                 </button>
-
                 {expandedSections.has('projects') && (
-                <div className="space-y-4 pl-4">
-                  {projects.map((project, index) => (
-                    <div key={index} className="border border-gray-200 rounded-xl p-4 space-y-4 dark:border-dark-300">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-gray-900 dark:text-gray-100">Project #{index + 1}</h4>
-                        {projects.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeProject(index)}
-                            className="text-red-600 hover:text-red-700 p-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
+                  <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-dark-300 space-y-4">
+                    {projectsFields.map((field, index) => (
+                      <div key={field.id} className="border border-gray-200 rounded-lg p-3 space-y-3 dark:border-dark-400">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100">Project #{index + 1}</h4>
+                          <button type="button" onClick={() => removeProject(index)} className="text-red-600 hover:text-red-700">
+                            <Trash2 className="w-5 h-5" />
                           </button>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Project Title</label>
-                          <input
-                            type="text"
-                            value={project.title}
-                            onChange={(e) => updateProject(index, 'title', e.target.value)}
-                            placeholder="E-commerce Website"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                          />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">GitHub URL</label>
-                          <input
-                            type="url"
-                            value={project.githubUrl || ''}
-                            onChange={(e) => updateProject(index, 'githubUrl', e.target.value)}
-                            placeholder="https://github.com/username/repo"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                          />
+                          <label className="input-label">Title</label>
+                          <input type="text" {...register(`projectsDetails.${index}.title`)} className="input-base" />
+                          {errors.projectsDetails?.[index]?.title && <p className="input-error">{errors.projectsDetails[index]?.title?.message}</p>}
                         </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Project Details</label>
-                        {project.bullets.map((bullet, bulletIndex) => (
-                          <div key={bulletIndex} className="flex gap-2 mb-2">
-                            <input
-                              type="text"
-                              value={bullet}
-                              onChange={(e) => updateProjectBullet(index, bulletIndex, e.target.value)}
-                              placeholder="Describe what you built/achieved"
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                            />
-                            {project.bullets.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeProjectBullet(index, bulletIndex)}
-                                className="text-red-600 hover:text-red-700 p-2"
-                              >
-                                <X className="w-4 h-4" />
+                        <div>
+                          <label className="input-label">GitHub URL (Optional)</label>
+                          <input type="url" {...register(`projectsDetails.${index}.githubUrl`)} className="input-base" />
+                          {errors.projectsDetails?.[index]?.githubUrl && <p className="input-error">{errors.projectsDetails[index]?.githubUrl?.message}</p>}
+                        </div>
+                        <div>
+                          <label className="input-label">Demo URL (Optional)</label>
+                          <input type="url" {...register(`projectsDetails.${index}.demoUrl`)} className="input-base" />
+                          {errors.projectsDetails?.[index]?.demoUrl && <p className="input-error">{errors.projectsDetails[index]?.demoUrl?.message}</p>}
+                        </div>
+                        <div>
+                          <label className="input-label">Description (Bullet Points)</label>
+                          {watchedProjects?.[index]?.bullets?.map((bullet, bulletIndex) => (
+                            <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
+                              <input type="text" {...register(`projectsDetails.${index}.bullets.${bulletIndex}`)} className="input-base flex-grow" />
+                              <button type="button" onClick={() => {
+                                const currentBullets = watchedProjects[index].bullets;
+                                if (currentBullets.length > 1) {
+                                  const newBullets = currentBullets.filter((_, i) => i !== bulletIndex);
+                                  reset(prev => ({
+                                    ...prev,
+                                    projectsDetails: prev.projectsDetails?.map((proj, projIdx) =>
+                                      projIdx === index ? { ...proj, bullets: newBullets } : proj
+                                    )
+                                  }));
+                                }
+                              }} className="text-red-600 hover:text-red-700">
+                                <Trash2 className="w-5 h-5" />
                               </button>
-                            )}
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => addProjectBullet(index)}
-                          className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center"
-                        >
-                          <Plus className="w-4 h-4 mr-1" />
-                          Add Detail
-                        </button>
+                            </div>
+                          ))}
+                          <button type="button" onClick={() => {
+                            const currentBullets = watchedProjects?.[index]?.bullets || [];
+                            reset(prev => ({
+                              ...prev,
+                              projectsDetails: prev.projectsDetails?.map((proj, projIdx) =>
+                                projIdx === index ? { ...proj, bullets: [...currentBullets, ''] } : proj
+                              )
+                            }));
+                          }} className="btn-secondary btn-sm flex items-center space-x-1 mt-2">
+                            <Plus className="w-4 h-4" /> <span>Add Bullet</span>
+                          </button>
+                          {errors.projectsDetails?.[index]?.bullets && <p className="input-error">{errors.projectsDetails[index]?.bullets?.message}</p>}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={addProject}
-                    className="w-full border-2 border-dashed border-gray-300 rounded-xl p-4 text-gray-600 hover:text-gray-800 hover:border-gray-400 transition-colors flex items-center justify-center"
-                  >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Add Project
-                  </button>
-                </div>
+                    ))}
+                    <button type="button" onClick={() => appendProject({ title: '', bullets: [''] })} className="btn-secondary w-full flex items-center justify-center space-x-2">
+                      <Plus className="w-5 h-5" /> <span>Add Project</span>
+                    </button>
+                  </div>
                 )}
               </div>
 
-              {/* Certifications Section */}
-              <div className="space-y-4">
-                <button
-                  type="button"
-                  onClick={() => toggleSection('certifications')}
-                  className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors dark:bg-dark-200 dark:hover:bg-dark-300"
-                >
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                    <Award className="w-5 h-5 mr-2 text-blue-600 dark:text-neon-cyan-400" />
-                    Certifications
-                  </h3>
-                  {expandedSections.has('certifications') ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+              {/* Skills */}
+              <div className="card">
+                <button type="button" onClick={() => toggleSection('skills')} className="w-full flex justify-between items-center p-4 sm:p-6 font-semibold text-lg text-gray-900 dark:text-gray-100">
+                  <div className="flex items-center space-x-3">
+                    <Sparkles className="w-5 h-5 text-pink-600 dark:text-neon-pink-400" />
+                    <span>Skills</span>
+                  </div>
+                  {expandedSections.has('skills') ? <ChevronUp /> : <ChevronDown />}
                 </button>
+                {expandedSections.has('skills') && (
+                  <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-dark-300 space-y-4">
+                    {skillsFields.map((field, index) => (
+                      <div key={field.id} className="border border-gray-200 rounded-lg p-3 space-y-3 dark:border-dark-400">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100">Skill Category #{index + 1}</h4>
+                          <button type="button" onClick={() => removeSkill(index)} className="text-red-600 hover:text-red-700">
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                        <div>
+                          <label className="input-label">Category Name</label>
+                          <input type="text" {...register(`skillsDetails.${index}.category`)} className="input-base" placeholder="e.g., Programming Languages" />
+                          {errors.skillsDetails?.[index]?.category && <p className="input-error">{errors.skillsDetails[index]?.category?.message}</p>}
+                        </div>
+                        <div>
+                          <label className="input-label">Skills (comma-separated)</label>
+                          <textarea
+                            {...register(`skillsDetails.${index}.list`, {
+                              setValueAs: (val: string) => val.split(',').map(s => s.trim()).filter(Boolean),
+                              validate: (val) => val.length > 0 || 'At least one skill is required',
+                            })}
+                            className="input-base h-24"
+                            placeholder="e.g., JavaScript, Python, React, Node.js"
+                            defaultValue={watchedSkills?.[index]?.list?.join(', ') || ''}
+                            onBlur={(e) => {
+                              const newSkills = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                              reset(prev => ({
+                                ...prev,
+                                skillsDetails: prev.skillsDetails?.map((skillCat, skillCatIdx) =>
+                                  skillCatIdx === index ? { ...skillCat, list: newSkills } : skillCat
+                                )
+                              }));
+                            }}
+                          ></textarea>
+                          {errors.skillsDetails?.[index]?.list && <p className="input-error">{errors.skillsDetails[index]?.list?.message}</p>}
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => appendSkill({ category: '', list: [] })} className="btn-secondary w-full flex items-center justify-center space-x-2">
+                      <Plus className="w-5 h-5" /> <span>Add Skill Category</span>
+                    </button>
+                  </div>
+                )}
+              </div>
 
+              {/* Certifications */}
+              <div className="card">
+                <button type="button" onClick={() => toggleSection('certifications')} className="w-full flex justify-between items-center p-4 sm:p-6 font-semibold text-lg text-gray-900 dark:text-gray-100">
+                  <div className="flex items-center space-x-3">
+                    <Award className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                    <span>Certifications</span>
+                  </div>
+                  {expandedSections.has('certifications') ? <ChevronUp /> : <ChevronDown />}
+                </button>
                 {expandedSections.has('certifications') && (
-                <div className="space-y-4 pl-4">
-                  {certifications.map((cert, index) => (
-                    <div key={index} className="flex gap-2">
+                  <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-dark-300 space-y-4">
+                    {certificationsFields.map((field, index) => (
+                      <div key={field.id} className="border border-gray-200 rounded-lg p-3 space-y-3 dark:border-dark-400">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100">Certification #{index + 1}</h4>
+                          <button type="button" onClick={() => removeCertification(index)} className="text-red-600 hover:text-red-700">
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                        <div>
+                          <label className="input-label">Title</label>
+                          <input type="text" {...register(`certificationsDetails.${index}.title`)} className="input-base" />
+                          {errors.certificationsDetails?.[index]?.title && <p className="input-error">{errors.certificationsDetails[index]?.title?.message}</p>}
+                        </div>
+                        <div>
+                          <label className="input-label">Description (Optional)</label>
+                          <textarea {...register(`certificationsDetails.${index}.description`)} className="input-base h-20"></textarea>
+                        </div>
+                        <div>
+                          <label className="input-label">Issuer (Optional)</label>
+                          <input type="text" {...register(`certificationsDetails.${index}.issuer`)} className="input-base" />
+                        </div>
+                        <div>
+                          <label className="input-label">Year (Optional)</label>
+                          <input type="text" {...register(`certificationsDetails.${index}.year`)} className="input-base" placeholder="e.g., 2023" />
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => appendCertification({ title: '' })} className="btn-secondary w-full flex items-center justify-center space-x-2">
+                      <Plus className="w-5 h-5" /> <span>Add Certification</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <button type="submit" disabled={isSaving || !isDirty} className="btn-primary w-full flex items-center justify-center space-x-2">
+                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                <span>{isSaving ? 'Saving Profile...' : 'Save Profile'}</span>
+              </button>
+            </form>
+          )}
+
+          {activeTab === 'wallet' && (
+            <div className="space-y-6">
+              {/* Wallet Balance */}
+              <div className="card p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <Wallet className="w-6 h-6 text-blue-600 dark:text-neon-cyan-400" />
+                    <h3 className="font-semibold text-xl text-gray-900 dark:text-gray-100">Your Wallet Balance</h3>
+                  </div>
+                  <button onClick={fetchWalletBalance} disabled={loadingWallet} className="btn-secondary btn-sm flex items-center space-x-2">
+                    {loadingWallet ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                    <span>Refresh</span>
+                  </button>
+                </div>
+                <div className="text-center">
+                  {loadingWallet ? (
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
+                  ) : (
+                    <p className="text-5xl font-bold text-green-600 dark:text-green-400">₹{walletBalance.toFixed(2)}</p>
+                  )}
+                  <p className="text-gray-600 dark:text-gray-300 mt-2">Available for redemption or purchases</p>
+                </div>
+                <button onClick={() => setShowRedeemForm(!showRedeemForm)} className="btn-primary w-full mt-4 flex items-center justify-center space-x-2">
+                  <DollarSign className="w-5 h-5" /> <span>{showRedeemForm ? 'Hide Redemption Form' : 'Redeem Earnings'}</span>
+                </button>
+              </div>
+
+              {/* Redemption Form */}
+              {showRedeemForm && (
+                <div className="card p-4 sm:p-6 animate-fadeIn">
+                  <h3 className="font-semibold text-xl text-gray-900 dark:text-gray-100 mb-4 flex items-center space-x-2">
+                    <Send className="w-6 h-6 text-purple-600 dark:text-neon-purple-400" />
+                    <span>Redeem Your Earnings</span>
+                  </h3>
+                  {redeemError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start mb-4 dark:bg-red-900/20 dark:border-red-500/50">
+                      <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 mt-0.5" />
+                      <p className="text-red-700 dark:text-red-300 text-sm font-medium">{redeemError}</p>
+                    </div>
+                  )}
+                  {redeemSuccess && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-xl flex items-start mb-4 dark:bg-neon-cyan-500/10 dark:border-neon-cyan-400/50">
+                      <CheckCircle className="w-5 h-5 text-green-600 dark:text-neon-cyan-400 mr-3 mt-0.5" />
+                      <p className="text-green-700 dark:text-neon-cyan-300 text-sm font-medium">{redeemSuccess}</p>
+                    </div>
+                  )}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="input-label">Amount (₹)</label>
+                      <input
+                        type="number"
+                        value={redeemAmount}
+                        onChange={(e) => setRedeemAmount(e.target.value)}
+                        className="input-base"
+                        placeholder="Minimum ₹100"
+                        min="100"
+                        step="any"
+                      />
+                    </div>
+                    <div>
+                      <label className="input-label">Redemption Method</label>
+                      <select
+                        value={redeemMethod}
+                        onChange={(e) => setRedeemMethod(e.target.value as 'upi' | 'bank_transfer' | '')}
+                        className="input-base"
+                      >
+                        <option value="">Select Method</option>
+                        <option value="upi">UPI</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="input-label">Details ({redeemMethod === 'upi' ? 'UPI ID' : 'Bank Account No. & IFSC'})</label>
                       <input
                         type="text"
-                        value={typeof cert === 'string' ? cert : cert.title}
-                        onChange={(e) => updateCertification(index, e.target.value)}
-                        placeholder="AWS Certified Solutions Architect"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
+                        value={redeemDetails}
+                        onChange={(e) => setRedeemDetails(e.target.value)}
+                        className="input-base"
+                        placeholder={redeemMethod === 'upi' ? 'your_upi_id@bank' : 'Account No., IFSC Code, Account Holder Name'}
                       />
-                      {certifications.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeCertification(index)}
-                          className="text-red-600 hover:text-red-700 p-2"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
                     </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={addCertification}
-                    className="w-full border-2 border-dashed border-gray-300 rounded-xl p-4 text-gray-600 hover:text-gray-800 hover:border-gray-400 transition-colors flex items-center justify-center"
-                  >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Add Certification
-                  </button>
+                    <button onClick={handleRedeem} disabled={isRedeeming} className="btn-primary w-full flex items-center justify-center space-x-2">
+                      {isRedeeming ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                      <span>{isRedeeming ? 'Submitting Request...' : 'Submit Redemption Request'}</span>
+                    </button>
+                  </div>
                 </div>
+              )}
+
+              {/* Referral Program */}
+              <div className="card p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <Share2 className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                    <h3 className="font-semibold text-xl text-gray-900 dark:text-gray-100">Referral Program</h3>
+                  </div>
+                </div>
+                {referralError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start mb-4 dark:bg-red-900/20 dark:border-red-500/50">
+                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 mt-0.5" />
+                    <p className="text-red-700 dark:text-red-300 text-sm font-medium">{referralError}</p>
+                  </div>
                 )}
-              </div>
-
-              {/* Submit Button */}
-              <div className="pt-6 border-t border-gray-200 dark:border-dark-300">
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className={`w-full py-4 px-6 rounded-xl font-semibold text-white transition-all duration-300 flex items-center justify-center space-x-2 shadow-lg hover:shadow-neon-cyan ${
-                    isLoading
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-neon-cyan-500 to-neon-blue-500 hover:from-neon-cyan-400 hover:to-neon-blue-400 hover:shadow-neon-cyan'
-                  }`}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Updating Profile...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-5 h-5" />
-                      <span>Save Complete Profile</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          )} {/* End viewMode === 'profile' conditional block */}
-
-          {/* Wallet Section */}
-          {viewMode === 'wallet' && (
-            <div className="space-y-6">
-              {/* Referral Code Section */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                  <Gift className="w-5 h-5 mr-2 text-purple-600 dark:text-neon-purple-400" />
-                  Your Referral Code
-                </h3>
-
-                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-6 mb-6 dark:from-dark-200 dark:to-dark-300 dark:border-neon-purple-400/50">
-                  <div className="text-center">
-                    <div className="bg-white border border-purple-300 rounded-lg p-4 mb-4 inline-block dark:bg-dark-100 dark:border-neon-purple-400">
-                      <div className="text-2xl font-bold text-purple-700 dark:text-neon-purple-400 tracking-wider">
-                        {user?.referralCode || 'Loading...'}
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                      <button
-                        onClick={handleCopyReferralCode}
-                        className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all min-h-[44px] shadow-lg ${
-                          copySuccess
-                            ? 'bg-green-600 text-white dark:bg-neon-cyan-500 dark:shadow-neon-cyan'
-                            : 'bg-purple-600 hover:bg-purple-700 text-white dark:bg-neon-purple-500 dark:hover:bg-neon-purple-400 dark:shadow-neon-purple'
-                        }`}
-                      >
-                        {copySuccess ? (
-                          <>
-                            <CheckCircle className="w-4 h-4" />
-                            <span>Copied!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-4 h-4" />
-                            <span>Copy Code</span>
-                          </>
-                        )}
+                {referralCode ? (
+                  <div className="space-y-4">
+                    <p className="text-gray-700 dark:text-gray-300">Share your unique referral code and earn rewards!</p>
+                    <div className="flex items-center space-x-2">
+                      <input type="text" value={referralCode} readOnly className="input-base flex-grow" />
+                      <button onClick={handleCopyReferralCode} className="btn-secondary flex items-center space-x-2">
+                        {copySuccess ? <CheckCircle className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
+                        <span>{copySuccess ? 'Copied!' : 'Copy'}</span>
                       </button>
-                      
-                      {/* The "Share" button and its logic has been removed below */}
-                      
                     </div>
-                    
-                    <div className="mt-4 text-center">
-                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-                        🎉 <strong>Earn 10%</strong> every time your friend purchases a plan with your code!
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Your friends also get ₹10 bonus when they use your referral code
-                      </p>
-                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Earn ₹10 for every friend who signs up using your code and completes their first purchase.
+                    </p>
                   </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                  <Wallet className="w-5 h-5 mr-2 text-green-600 dark:text-neon-cyan-400" />
-                  Wallet & Earnings
-                </h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  {/* Current Balance */}
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 dark:from-neon-cyan-500/10 dark:to-neon-cyan-500/20 dark:border-neon-cyan-400/50">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-green-700 dark:text-neon-cyan-300">Current Balance</p>
-                        <p className="text-2xl font-bold text-green-900 dark:text-neon-cyan-400">₹{walletBalance.toFixed(2)}</p>
-                      </div>
-                      <div className="bg-green-100 p-3 rounded-full dark:bg-neon-cyan-500/20">
-                        <Banknote className="w-6 h-6 text-green-600 dark:text-neon-cyan-400" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Pending Earnings */}
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 dark:from-neon-blue-500/10 dark:to-neon-blue-500/20 dark:border-neon-blue-400/50">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-blue-700 dark:text-neon-blue-300">Pending Earnings</p>
-                        <p className="text-2xl font-bold text-blue-900 dark:text-neon-blue-400">₹{pendingEarnings.toFixed(2)}</p>
-                      </div>
-                      <div className="bg-blue-100 p-3 rounded-full dark:bg-neon-blue-500/20">
-                        <CreditCard className="w-6 h-6 text-blue-600 dark:text-neon-blue-400" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Redemption Section */}
-                {walletBalance >= 100 && !showRedeemForm && (
-                  <button
-                    onClick={() => setShowRedeemForm(true)}
-                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl dark:from-neon-cyan-500 dark:to-neon-blue-500 dark:hover:from-neon-cyan-400 dark:hover:to-neon-blue-400 dark:shadow-neon-cyan"
-                  >
-                    <ArrowUpRight className="w-5 h-5" />
-                    <span>Redeem ₹{walletBalance.toFixed(2)}</span>
+                ) : (
+                  <button onClick={handleGenerateReferralCode} disabled={isGeneratingReferral} className="btn-primary w-full flex items-center justify-center space-x-2">
+                    {isGeneratingReferral ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                    <span>{isGeneratingReferral ? 'Generating Code...' : 'Generate My Referral Code'}</span>
                   </button>
                 )}
-
-                {walletBalance < 100 && (
-                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 dark:bg-orange-900/20 dark:border-orange-500/50">
-                    <div className="flex items-start">
-                      <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400 mr-3 mt-0.5" />
-                      <div>
-                        <p className="text-orange-800 dark:text-orange-300 font-medium">Minimum Redemption Amount</p>
-                        <p className="text-orange-700 dark:text-orange-400 text-sm mt-1">
-                          You need at least ₹100 to redeem your earnings. Current balance: ₹{walletBalance.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Redemption Form */}
-                {showRedeemForm && (
-                  <div className="mt-4 bg-gray-50 border border-gray-200 rounded-xl p-4 dark:bg-dark-200 dark:border-dark-300">
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Redeem Earnings</h4>
-                    
-                    {/* Redemption Method Selection */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Redemption Method
-                      </label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <button
-                          type="button" // Important: Prevent form submission if inside a form
-                          onClick={() => setRedeemMethod('upi')}
-                          className={`p-3 rounded-lg border-2 transition-all ${
-                            redeemMethod === 'upi'
-                              ? 'border-neon-cyan-500 bg-neon-cyan-50 text-neon-cyan-700 dark:bg-neon-cyan-500/20 dark:border-neon-cyan-400'
-                              : 'border-gray-300 hover:border-neon-cyan-300 dark:border-dark-300 dark:hover:border-neon-cyan-400'
-                          }`}
-                        >
-                          <div className="text-center">
-                            <CreditCard className="w-6 h-6 mx-auto mb-2" />
-                            <span className="font-medium">UPI</span>
-                          </div>
-                        </button>
-                        <button
-                          type="button" // Important: Prevent form submission if inside a form
-                          onClick={() => setRedeemMethod('bank_transfer')}
-                          className={`p-3 rounded-lg border-2 transition-all ${
-                            redeemMethod === 'bank_transfer'
-                              ? 'border-neon-cyan-500 bg-neon-cyan-50 text-neon-cyan-700 dark:bg-neon-cyan-500/20 dark:border-neon-cyan-400'
-                              : 'border-gray-300 hover:border-neon-cyan-300 dark:border-dark-300 dark:hover:border-neon-cyan-400'
-                          }`}
-                        >
-                          <div className="text-center">
-                            <Banknote className="w-6 h-6 mx-auto mb-2" />
-                            <span className="font-medium">Bank Transfer</span>
-                          </div>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* UPI Details */}
-                    {redeemMethod === 'upi' && (
-                      <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          UPI ID
-                        </label>
-                        <input
-                          type="text"
-                          value={redeemDetails.upi_id}
-                          onChange={(e) => setRedeemDetails(prev => ({ ...prev, upi_id: e.target.value }))}
-                          placeholder="yourname@upi"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-neon-cyan-500 focus:border-neon-cyan-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                        />
-                      </div>
-                    )}
-
-                    {/* Bank Transfer Details */}
-                    {redeemMethod === 'bank_transfer' && (
-                      <div className="space-y-4 mb-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Account Holder Name
-                          </label>
-                          <input
-                            type="text"
-                            value={redeemDetails.account_holder_name}
-                            onChange={(e) => setRedeemDetails(prev => ({ ...prev, account_holder_name: e.target.value }))}
-                            placeholder="Full name as per bank account"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-neon-cyan-500 focus:border-neon-cyan-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Bank Account Number
-                          </label>
-                          <input
-                            type="text"
-                            value={redeemDetails.bank_account}
-                            onChange={(e) => setRedeemDetails(prev => ({ ...prev, bank_account: e.target.value }))}
-                            placeholder="Account number"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-neon-cyan-500 focus:border-neon-cyan-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            IFSC Code
-                          </label>
-                          <input
-                            type="text"
-                            value={redeemDetails.ifsc_code}
-                            onChange={(e) => setRedeemDetails(prev => ({ ...prev, ifsc_code: e.target.value }))}
-                            placeholder="IFSC Code"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-neon-cyan-500 focus:border-neon-cyan-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="flex space-x-3">
-                      <button
-                        type="button" // Important: Prevent default form submission
-                        onClick={handleRedeemSubmit}
-                        disabled={isRedeeming || (redeemMethod === 'upi' && !redeemDetails.upi_id) ||
-                                 (redeemMethod === 'bank_transfer' && (!redeemDetails.account_holder_name || !redeemDetails.bank_account || !redeemDetails.ifsc_code))}
-                        className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-xl transition-colors flex items-center justify-center space-x-2 dark:bg-neon-cyan-500 dark:hover:bg-neon-cyan-400 dark:shadow-neon-cyan"
-                      >
-                        {isRedeeming ? (
-                          <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            <span>Processing...</span>
-                          </>
-                        ) : (
-                          <>
-                            <ArrowUpRight className="w-5 h-5" />
-                            <span>Submit Redemption</span>
-                          </>
-                        )}
-                      </button>
-                      <button
-                        type="button" // Important: Prevent default form submission
-                        onClick={() => setShowRedeemForm(false)}
-                        className="px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold rounded-xl transition-colors dark:bg-dark-300 dark:hover:bg-dark-400 dark:text-gray-300"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )} {/* End viewMode === 'wallet' conditional block */}
-
-
-          {/* Info Note (only visible in profile view) */}
-          {viewMode === 'profile' && (
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl dark:bg-neon-cyan-500/10 dark:border-neon-cyan-400/50">
-              <div className="flex items-start">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mr-3 mt-2 flex-shrink-0 dark:bg-neon-cyan-400"></div>
-                <div className="text-sm text-blue-800 dark:text-neon-cyan-300">
-                  <p className="font-medium mb-1">📝 Auto-Resume Population</p>
-                  <p className="text-blue-700 dark:text-gray-300">
-                    These details will be automatically included in your generated resumes, saving you time during the optimization process.
-                  </p>
-                </div>
               </div>
             </div>
           )}
