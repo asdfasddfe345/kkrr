@@ -555,26 +555,26 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Degree</label>
-              <input type="text" {...register(`education_details.${index}.degree`)} className="input-base" />
+              <input type="text" {...register(\`education_details.${index}.degree`)} className="input-base" />
               {errors.education_details?.[index]?.degree && <p className="text-red-500 text-sm mt-1">{errors.education_details[index]?.degree?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">School/University</label>
-              <input type="text" {...register(`education_details.${index}.school`)} className="input-base" />
+              <input type="text" {...register(\`education_details.${index}.school`)} className="input-base" />
               {errors.education_details?.[index]?.school && <p className="text-red-500 text-sm mt-1">{errors.education_details[index]?.school?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
-              <input type="text" {...register(`education_details.${index}.year`)} className="input-base" />
+              <input type="text" {...register(\`education_details.${index}.year`)} className="input-base" />
               {errors.education_details?.[index]?.year && <p className="text-red-500 text-sm mt-1">{errors.education_details[index]?.year?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">CGPA/GPA (Optional)</label>
-              <input type="text" {...register(`education_details.${index}.cgpa`)} className="input-base" />
+              <input type="text" {...register(\`education_details.${index}.cgpa`)} className="input-base" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Location (Optional)</label>
-              <input type="text" {...register(`education_details.${index}.location`)} className="input-base" />
+              <input type="text" {...register(\`education_details.${index}.location`)} className="input-base" />
             </div>
           </div>
         ))}
@@ -600,22 +600,22 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-              <input type="text" {...register(`experience_details.${index}.role`)} className="input-base" />
+              <input type="text" {...register(\`experience_details.${index}.role`)} className="input-base" />
               {errors.experience_details?.[index]?.role && <p className="text-red-500 text-sm mt-1">{errors.experience_details[index]?.role?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
-              <input type="text" {...register(`experience_details.${index}.company`)} className="input-base" />
+              <input type="text" {...register(\`experience_details.${index}.company`)} className="input-base" />
               {errors.experience_details?.[index]?.company && <p className="text-red-500 text-sm mt-1">{errors.experience_details[index]?.company?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
-              <input type="text" {...register(`experience_details.${index}.year`)} className="input-base" />
+              <input type="text" {...register(\`experience_details.${index}.year`)} className="input-base" />
               {errors.experience_details?.[index]?.year && <p className="text-red-500 text-sm mt-1">{errors.experience_details[index]?.year?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Location (Optional)</label>
-              <input type="text" {...register(`experience_details.${index}.location`)} className="input-base" />
+              <input type="text" {...register(\`experience_details.${index}.location`)} className="input-base" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Responsibilities/Achievements</label>
@@ -624,7 +624,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                 {/* This part needs a nested useFieldArray or manual state management for bullets */}
                 {/* For simplicity, let's assume a single textarea for now, or implement nested field array */}
                 <textarea
-                  {...register(`experience_details.${index}.bullets.0`)} // Assuming first bullet is main
+                  {...register(\`experience_details.${index}.bullets.0`)} // Assuming first bullet is main
                   className="input-base h-24 resize-y"
                   placeholder="Enter responsibilities/achievements, one per line"
                   defaultValue={field.bullets?.join('\n')}
@@ -662,13 +662,13 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <input type="text" {...register(`skills_details.${index}.category`)} className="input-base" />
+              <input type="text" {...register(\`skills_details.${index}.category`)} className="input-base" />
               {errors.skills_details?.[index]?.category && <p className="text-red-500 text-sm mt-1">{errors.skills_details[index]?.category?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Skills (comma-separated)</label>
               <textarea
-                {...register(`skills_details.${index}.list.0`)} // Assuming first item in list is main
+                {...register(\`skills_details.${index}.list.0`)} // Assuming first item in list is main
                 className="input-base h-24 resize-y"
                 placeholder="e.g., JavaScript, React, Node.js"
                 defaultValue={field.list?.join(', ')}
@@ -705,20 +705,20 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-              <input type="text" {...register(`certifications_details.${index}.title`)} className="input-base" />
+              <input type="text" {...register(\`certifications_details.${index}.title`)} className="input-base" />
               {errors.certifications_details?.[index]?.title && <p className="text-red-500 text-sm mt-1">{errors.certifications_details[index]?.title?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Issuer (Optional)</label>
-              <input type="text" {...register(`certifications_details.${index}.issuer`)} className="input-base" />
+              <input type="text" {...register(\`certifications_details.${index}.issuer`)} className="input-base" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Year (Optional)</label>
-              <input type="text" {...register(`certifications_details.${index}.year`)} className="input-base" />
+              <input type="text" {...register(\`certifications_details.${index}.year`)} className="input-base" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
-              <textarea {...register(`certifications_details.${index}.description`)} className="input-base h-20 resize-y" />
+              <textarea {...register(\`certifications_details.${index}.description`)} className="input-base h-20 resize-y" />
             </div>
           </div>
         ))}
@@ -755,7 +755,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
               <span>My Wallet Balance</span>
             </h3>
             <button onClick={fetchWalletData} disabled={loadingWallet} className="text-white/80 hover:text-white">
-              <RefreshCw className={`w-5 h-5 ${loadingWallet ? 'animate-spin' : ''}`} />
+              <RefreshCw className={\`w-5 h-5 ${loadingWallet ? 'animate-spin' : ''}`} />
             </button>
           </div>
           <p className="text-4xl font-extrabold">₹{walletBalance.toFixed(2)}</p>
@@ -901,7 +901,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                     <p className="font-medium capitalize">{transaction.type.replace(/_/g, ' ')}</p>
                     <p className="text-xs text-gray-500">{new Date(transaction.created_at).toLocaleDateString()}</p>
                   </div>
-                  <span className={`font-bold ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <span className={\`font-bold ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
                     ₹{transaction.amount.toFixed(2)}
                   </span>
                 </li>
@@ -943,7 +943,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
           <div className="flex justify-center">
             <button
               onClick={() => setActiveTab('profile')}
-              className={`py-3 px-6 text-sm font-medium transition-colors ${
+              className={\`py-3 px-6 text-sm font-medium transition-colors ${
                 activeTab === 'profile'
                   ? 'border-b-2 border-blue-600 text-blue-600'
                   : 'text-gray-500 hover:text-gray-700'
@@ -953,7 +953,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('wallet')}
-              className={`py-3 px-6 text-sm font-medium transition-colors ${
+              className={\`py-3 px-6 text-sm font-medium transition-colors ${
                 activeTab === 'wallet'
                   ? 'border-b-2 border-blue-600 text-blue-600'
                   : 'text-gray-500 hover:text-gray-700'
