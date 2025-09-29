@@ -35,7 +35,7 @@ const useAuth = () => ({
 // Mock Services
 const authService = {
   updateUserProfile: async (userId: string, data: any) => {
-    console.log(\`Updating profile for user ${userId}:`, data);
+    console.log(`Updating profile for user ${userId}:`, data);
     return Promise.resolve({ success: true });
   },
 };
