@@ -1,3 +1,6 @@
+// Import resume types for user profile
+import { Education, WorkExperience, Skill, Project, Certification } from './resume';
+
 export interface User {
   id: string;
   name: string;
@@ -11,6 +14,15 @@ export interface User {
   createdAt: string;
   lastLogin: string;
   hasSeenProfilePrompt?: boolean;
+  resumesCreatedCount?: number;
+  // NEW: Resume-related details
+  resumeHeadline?: string;
+  currentLocation?: string;
+  educationDetails?: Education[];
+  experienceDetails?: WorkExperience[];
+  skillsDetails?: Skill[];
+  projectsDetails?: Project[];
+  certificationsDetails?: (string | Certification)[];
 }
 
 export interface AuthState {

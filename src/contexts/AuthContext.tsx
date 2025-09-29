@@ -151,6 +151,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   // Ensure hasSeenProfilePrompt defaults to false if null/undefined
                   hasSeenProfilePrompt: fullProfile?.has_seen_profile_prompt ?? false,
                   resumesCreatedCount: fullProfile?.resumes_created_count ?? 0, // ADDED: Update with new field
+                  // NEW: Resume-related details
+                  resumeHeadline: fullProfile?.resume_headline || undefined,
+                  currentLocation: fullProfile?.current_location || undefined,
+                  educationDetails: fullProfile?.education_details || undefined,
+                  experienceDetails: fullProfile?.experience_details || undefined,
+                  skillsDetails: fullProfile?.skills_details || undefined,
+                  projectsDetails: fullProfile?.projects_details || undefined,
+                  certificationsDetails: fullProfile?.certifications_details || undefined,
                 } : null,
                 isAuthenticated: true,
                 isLoading: false,

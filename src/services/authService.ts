@@ -138,14 +138,21 @@ class AuthService {
     username?: string,
     referral_code?: string,
     has_seen_profile_prompt?: boolean,
-    resumes_created_count?: number // ADDED: New field
+    resumes_created_count?: number,
+    resume_headline?: string,
+    current_location?: string,
+    education_details?: any,
+    experience_details?: any,
+    skills_details?: any,
+    projects_details?: any,
+    certifications_details?: any
   } | null> {
     console.log('AuthService: Fetching user profile for user ID:', userId);
     try {
       const { data, error }
         = await supabase
         .from('user_profiles')
-        .select('full_name, email_address, phone, linkedin_profile, wellfound_profile, username, referral_code, has_seen_profile_prompt, resumes_created_count') // MODIFIED: Select new column
+        .select('full_name, email_address, phone, linkedin_profile, wellfound_profile, username, referral_code, has_seen_profile_prompt, resumes_created_count, resume_headline, current_location, education_details, experience_details, skills_details, projects_details, certifications_details')
         .eq('id', userId)
         .maybeSingle();
       if (error) {
@@ -314,6 +321,13 @@ class AuthService {
     linkedin_profile?: string;
     github_profile?: string;
     has_seen_profile_prompt?: boolean;
+    resume_headline?: string;
+    current_location?: string;
+    education_details?: any;
+    experience_details?: any;
+    skills_details?: any;
+    projects_details?: any;
+    certifications_details?: any;
   }): Promise<void> {
     console.log('AuthService: Starting updateUserProfile for user ID:', userId, 'updates:', updates);
     try {
@@ -323,6 +337,13 @@ class AuthService {
         phone: updates.phone,
         linkedin_profile: updates.linkedin_profile,
         has_seen_profile_prompt: updates.has_seen_profile_prompt,
+        resume_headline: updates.resume_headline,
+        current_location: updates.current_location,
+        education_details: updates.education_details,
+        experience_details: updates.experience_details,
+        skills_details: updates.skills_details,
+        projects_details: updates.projects_details,
+        certifications_details: updates.certifications_details,
         profile_updated_at: new Date().toISOString()
       };
 
