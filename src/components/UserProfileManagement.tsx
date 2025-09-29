@@ -128,7 +128,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
   const [isGeneratingReferral, setIsGeneratingReferral] = useState(false);
   const [referralError, setReferralError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['personal', 'social']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['resume-upload', 'personal', 'social']));
   
   // Resume upload states
   const [isProcessingResume, setIsProcessingResume] = useState(false);
