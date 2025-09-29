@@ -290,11 +290,11 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
         throw new Error('Authentication required for redemption.');
       }
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-redemption-email`, {
+      const response = await fetch(\`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-redemption-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': \`Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           userId: user.id,
@@ -437,7 +437,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as 'profile' | 'wallet' | 'security')}
-                className={`py-3 sm:py-4 px-2 sm:px-0 border-b-2 flex items-center space-x-2 font-medium text-sm sm:text-base transition-colors ${
+                className={\`py-3 sm:py-4 px-2 sm:px-0 border-b-2 flex items-center space-x-2 font-medium text-sm sm:text-base transition-colors ${
                   activeTab === tab.id
                     ? 'border-blue-500 text-blue-600 dark:border-neon-cyan-400 dark:text-neon-cyan-400'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-dark-200'
@@ -555,26 +555,26 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Degree</label>
-                        <input type="text" {...register(`education_details.${index}.degree`)} className="input-base" />
+                        <input type="text" {...register(\`education_details.${index}.degree`)} className="input-base" />
                         {errors.education_details?.[index]?.degree && <p className="text-red-500 text-xs mt-1">{errors.education_details[index]?.degree?.message}</p>}
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">School</label>
-                        <input type="text" {...register(`education_details.${index}.school`)} className="input-base" />
+                        <input type="text" {...register(\`education_details.${index}.school`)} className="input-base" />
                         {errors.education_details?.[index]?.school && <p className="text-red-500 text-xs mt-1">{errors.education_details[index]?.school?.message}</p>}
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Year</label>
-                        <input type="text" {...register(`education_details.${index}.year`)} className="input-base" />
+                        <input type="text" {...register(\`education_details.${index}.year`)} className="input-base" />
                         {errors.education_details?.[index]?.year && <p className="text-red-500 text-xs mt-1">{errors.education_details[index]?.year?.message}</p>}
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CGPA (Optional)</label>
-                        <input type="text" {...register(`education_details.${index}.cgpa`)} className="input-base" />
+                        <input type="text" {...register(\`education_details.${index}.cgpa`)} className="input-base" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Location (Optional)</label>
-                        <input type="text" {...register(`education_details.${index}.location`)} className="input-base" />
+                        <input type="text" {...register(\`education_details.${index}.location`)} className="input-base" />
                       </div>
                     </div>
                   </div>
@@ -600,17 +600,17 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Role</label>
-                        <input type="text" {...register(`experience_details.${index}.role`)} className="input-base" />
+                        <input type="text" {...register(\`experience_details.${index}.role`)} className="input-base" />
                         {errors.experience_details?.[index]?.role && <p className="text-red-500 text-xs mt-1">{errors.experience_details[index]?.role?.message}</p>}
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Company</label>
-                        <input type="text" {...register(`experience_details.${index}.company`)} className="input-base" />
+                        <input type="text" {...register(\`experience_details.${index}.company`)} className="input-base" />
                         {errors.experience_details?.[index]?.company && <p className="text-red-500 text-xs mt-1">{errors.experience_details[index]?.company?.message}</p>}
                       </div>
                       <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Year / Duration</label>
-                        <input type="text" {...register(`experience_details.${index}.year`)} className="input-base" />
+                        <input type="text" {...register(\`experience_details.${index}.year`)} className="input-base" />
                         {errors.experience_details?.[index]?.year && <p className="text-red-500 text-xs mt-1">{errors.experience_details[index]?.year?.message}</p>}
                       </div>
                       <div className="md:col-span-2">
@@ -619,7 +619,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                           <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
                             <input
                               type="text"
-                              {...register(`experience_details.${index}.bullets.${bulletIndex}`)}
+                              {...register(\`experience_details.${index}.bullets.${bulletIndex}`)}
                               className="input-base flex-1"
                             />
                             <button type="button" onClick={() => {
@@ -661,7 +661,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Project Title</label>
-                      <input type="text" {...register(`projects_details.${index}.title`)} className="input-base" />
+                      <input type="text" {...register(\`projects_details.${index}.title`)} className="input-base" />
                       {errors.projects_details?.[index]?.title && <p className="text-red-500 text-xs mt-1">{errors.projects_details[index]?.title?.message}</p>}
                     </div>
                     <div>
@@ -670,7 +670,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                         <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
                           <input
                             type="text"
-                            {...register(`projects_details.${index}.bullets.${bulletIndex}`)}
+                            {...register(\`projects_details.${index}.bullets.${bulletIndex}`)}
                             className="input-base flex-1"
                           />
                           <button type="button" onClick={() => {
@@ -711,7 +711,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Category</label>
-                      <input type="text" {...register(`skills_details.${index}.category`)} className="input-base" />
+                      <input type="text" {...register(\`skills_details.${index}.category`)} className="input-base" />
                       {errors.skills_details?.[index]?.category && <p className="text-red-500 text-xs mt-1">{errors.skills_details[index]?.category?.message}</p>}
                     </div>
                     <div>
@@ -720,7 +720,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                         <div key={skillIndex} className="flex items-center space-x-2 mb-2">
                           <input
                             type="text"
-                            {...register(`skills_details.${index}.list.${skillIndex}`)}
+                            {...register(\`skills_details.${index}.list.${skillIndex}`)}
                             className="input-base flex-1"
                           />
                           <button type="button" onClick={() => {
@@ -761,12 +761,12 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Certification Title</label>
-                      <input type="text" {...register(`certifications_details.${index}.title`)} className="input-base" />
+                      <input type="text" {...register(\`certifications_details.${index}.title`)} className="input-base" />
                       {errors.certifications_details?.[index]?.title && <p className="text-red-500 text-xs mt-1">{errors.certifications_details[index]?.title?.message}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description (Optional)</label>
-                      <input type="text" {...register(`certifications_details.${index}.description`)} className="input-base" />
+                      <input type="text" {...register(\`certifications_details.${index}.description`)} className="input-base" />
                     </div>
                   </div>
                 ))}
