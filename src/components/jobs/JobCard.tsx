@@ -1,3 +1,4 @@
+```typescript
 // src/components/jobs/JobCard.tsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -18,11 +19,11 @@ import {
   AlertCircle,
   Loader2
 } from 'lucide-react';
-import { JobListing, AutoApplyResult, OptimizedResume } from 'src/types/jobs';
-import { jobsService } from 'src/services/jobsService';
-import { autoApplyOrchestrator } from 'src/services/autoApplyOrchestrator';
-import { profileResumeService } from 'src/services/profileResumeService';
-import { useAuth } from 'src/contexts/AuthContext';
+import { JobListing, AutoApplyResult, OptimizedResume } from '../../types/jobs';
+import { jobsService } from '../../services/jobsService';
+import { autoApplyOrchestrator } from '../../services/autoApplyOrchestrator';
+import { profileResumeService } from '../../services/profileResumeService';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface JobCardProps {
   job: JobListing;
@@ -334,4 +335,4 @@ export const JobCard: React.FC<JobCardProps> = ({
     </motion.div>
   );
 };
-
+```
