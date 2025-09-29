@@ -1,4 +1,3 @@
-```typescript
 // src/components/jobs/JobCard.tsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -19,11 +18,11 @@ import {
   AlertCircle,
   Loader2
 } from 'lucide-react';
-import { JobListing, AutoApplyResult, OptimizedResume } from '../../types/jobs';
-import { jobsService } from '../../services/jobsService';
-import { autoApplyOrchestrator } from '../../services/autoApplyOrchestrator';
-import { profileResumeService } from '../../services/profileResumeService';
-import { useAuth } from '../../contexts/AuthContext';
+import { JobListing, AutoApplyResult, OptimizedResume } from 'src/types/jobs';
+import { jobsService } from 'src/services/jobsService';
+import { autoApplyOrchestrator } from 'src/services/autoApplyOrchestrator';
+import { profileResumeService } from 'src/services/profileResumeService';
+import { useAuth } from 'src/contexts/AuthContext';
 
 interface JobCardProps {
   job: JobListing;
@@ -168,9 +167,9 @@ export const JobCard: React.FC<JobCardProps> = ({
     let formattedAmount = '';
     
     if (amount >= 100000) {
-      formattedAmount = \`${(amount / 100000).toFixed(1)}L`;
+      formattedAmount = `${(amount / 100000).toFixed(1)}L`;
     } else if (amount >= 1000) {
-      formattedAmount = \`${(amount / 1000).toFixed(0)}K`;
+      formattedAmount = `${(amount / 1000).toFixed(0)}K`;
     } else {
       formattedAmount = amount.toString();
     }
@@ -218,7 +217,7 @@ export const JobCard: React.FC<JobCardProps> = ({
         </div>
 
         <div className="flex flex-wrap gap-2 mb-4">
-          <span className={\`px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${getDomainColor(job.domain)} text-white`}>
+          <span className={`px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${getDomainColor(job.domain)} text-white`}>
             {job.domain}
           </span>
           <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium flex items-center dark:bg-blue-900/20 dark:text-blue-300">
@@ -335,4 +334,4 @@ export const JobCard: React.FC<JobCardProps> = ({
     </motion.div>
   );
 };
-```
+
