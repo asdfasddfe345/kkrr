@@ -39,8 +39,7 @@ export const JobCard: React.FC<JobCardProps> = ({
   onManualApply,
   onAutoApply,
   isAuthenticated,
-  onShowAuth,
-  onCompleteProfile // NEW: Destructure the new prop
+  onShowAuth
 }) => {
   const { user } = useAuth();
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -324,22 +323,14 @@ export const JobCard: React.FC<JobCardProps> = ({
         
         {/* Profile Completion Warning */}
         {isAuthenticated && profileValidation && !profileValidation.isComplete && (
-          <button
-            onClick={() => onCompleteProfile && onCompleteProfile()}
-            className="mt-3 w-full p-3 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-all duration-200 cursor-pointer group dark:bg-orange-900/20 dark:border-orange-500/50 dark:hover:bg-orange-900/30"
-          >
-            <div className="flex items-center justify-between text-orange-700 dark:text-orange-300">
-              <div className="flex items-center">
-                <AlertCircle className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-medium">
-                  Complete your profile to enable auto-apply: {profileValidation.missingFields.join(', ')}
-                </span>
-              </div>
-              <span className="text-xs font-semibold text-orange-600 group-hover:text-orange-800 dark:text-orange-400 dark:group-hover:text-orange-200">
-                Click to complete →
+          <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg dark:bg-orange-900/20 dark:border-orange-500/50">
+            <div className="flex items-center text-orange-700 dark:text-orange-300">
+              <AlertCircle className="w-4 h-4 mr-2" />
+              <span className="text-xs">
+                Complete your profile to enable auto-apply: {profileValidation.missingFields.join(', ')}
               </span>
             </div>
-          </button>
+          </div>
         )}
       </div>
     </motion.div>
