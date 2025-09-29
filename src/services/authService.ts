@@ -144,16 +144,14 @@ class AuthService {
     current_location?: string,
     education_details?: any,
     experience_details?: any,
-    skills_details?: any,
-    projects_details?: any,
-    certifications_details?: any
+    skills_details?: any
   } | null> {
     console.log('AuthService: Fetching user profile for user ID:', userId);
     try {
       const { data, error }
         = await supabase
         .from('user_profiles')
-        .select('full_name, email_address, phone, linkedin_profile, wellfound_profile, username, referral_code, has_seen_profile_prompt, resumes_created_count, role, resume_headline, current_location, education_details, experience_details, skills_details, projects_details, certifications_details')
+        .select('full_name, email_address, phone, linkedin_profile, wellfound_profile, username, referral_code, has_seen_profile_prompt, resumes_created_count, role, resume_headline, current_location, education_details, experience_details, skills_details')
         .eq('id', userId)
         .maybeSingle();
       if (error) {

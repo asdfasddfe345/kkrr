@@ -158,8 +158,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   educationDetails: fullProfile?.education_details || undefined,
                   experienceDetails: fullProfile?.experience_details || undefined,
                   skillsDetails: fullProfile?.skills_details || undefined,
-                  projectsDetails: fullProfile?.projects_details || undefined,
-                  certificationsDetails: fullProfile?.certifications_details || undefined,
                 } : null,
                 isAuthenticated: true,
                 isLoading: false,

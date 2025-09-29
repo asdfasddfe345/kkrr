@@ -22,8 +22,6 @@ export interface User {
   educationDetails?: Education[];
   experienceDetails?: WorkExperience[];
   skillsDetails?: Skill[];
-  projectsDetails?: Project[];
-  certificationsDetails?: (string | Certification)[];
 }
 
 export interface AuthState {
