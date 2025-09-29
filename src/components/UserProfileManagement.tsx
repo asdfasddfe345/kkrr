@@ -1,4 +1,4 @@
-```tsx
+```typescript
 // src/components/UserProfileManagement.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -38,6 +38,8 @@ import {
   QrCode,
   History,
   TrendingUp,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
@@ -196,7 +198,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
         experience_details: user.experienceDetails || [],
         skills_details: user.skillsDetails || [],
         // Projects and certifications are not directly on the user object yet,
-        // so they won't be pre-filled from  `user` unless added to the AuthContext User type.
+        // so they won't be pre-filled from user unless added to the AuthContext User type.
         projects_details: [],
         certifications_details: [],
       });
@@ -548,7 +550,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
       {/* Social Links */}
       <div className="card p-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <Link className="w-5 h-5 mr-2 text-purple-600" />
+          <Linkedin className="w-5 h-5 mr-2 text-purple-600" />
           Social Links
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -720,7 +722,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
         ))}
         <button
           type="button"
-          onClick={() => appendSkill({ category: '', list: [] })}
+          onClick={() => appendSkill({ category: '', count: 0, list: [] })}
           className="btn-secondary w-full flex items-center justify-center space-x-2 mt-3"
         >
           <Plus className="w-5 h-5" />
