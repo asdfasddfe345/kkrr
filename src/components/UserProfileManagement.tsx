@@ -309,11 +309,11 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
       if (sessionError || !session?.access_token) {
         throw new Error('Authentication required to generate referral code.');
       }
-      const response = await fetch(\`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-referral-code`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-referral-code`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': 'Bearer ' + session.access_token, // Corrected line
         },
         body: JSON.stringify({ userId: user.id }),
       });
@@ -369,11 +369,11 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
         throw new Error('Authentication required to redeem.');
       }
 
-      const response = await fetch(\`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-redemption-email`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-redemption-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': \`Bearer ${session.access_token}`,
+          'Authorization': 'Bearer ' + session.access_token, // Corrected line
         },
         body: JSON.stringify({
           userId: user.id,
@@ -582,26 +582,26 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Degree</label>
-              <input type="text" {...register(\`education_details.${index}.degree`)} className="input-base" />
+              <input type="text" {...register(`education_details.${index}.degree`)} className="input-base" />
               {errors.education_details?.[index]?.degree && <p className="text-red-500 text-sm mt-1">{errors.education_details[index]?.degree?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">School/University</label>
-              <input type="text" {...register(\`education_details.${index}.school`)} className="input-base" />
+              <input type="text" {...register(`education_details.${index}.school`)} className="input-base" />
               {errors.education_details?.[index]?.school && <p className="text-red-500 text-sm mt-1">{errors.education_details[index]?.school?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
-              <input type="text" {...register(\`education_details.${index}.year`)} className="input-base" />
+              <input type="text" {...register(`education_details.${index}.year`)} className="input-base" />
               {errors.education_details?.[index]?.year && <p className="text-red-500 text-sm mt-1">{errors.education_details[index]?.year?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">CGPA/GPA (Optional)</label>
-              <input type="text" {...register(\`education_details.${index}.cgpa`)} className="input-base" />
+              <input type="text" {...register(`education_details.${index}.cgpa`)} className="input-base" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Location (Optional)</label>
-              <input type="text" {...register(\`education_details.${index}.location`)} className="input-base" />
+              <input type="text" {...register(`education_details.${index}.location`)} className="input-base" />
             </div>
           </div>
         ))}
@@ -630,30 +630,30 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-              <input type="text" {...register(\`experience_details.${index}.role`)} className="input-base" />
+              <input type="text" {...register(`experience_details.${index}.role`)} className="input-base" />
               {errors.experience_details?.[index]?.role && <p className="text-red-500 text-sm mt-1">{errors.experience_details[index]?.role?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
-              <input type="text" {...register(\`experience_details.${index}.company`)} className="input-base" />
+              <input type="text" {...register(`experience_details.${index}.company`)} className="input-base" />
               {errors.experience_details?.[index]?.company && <p className="text-red-500 text-sm mt-1">{errors.experience_details[index]?.company?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Year/Duration</label>
-              <input type="text" {...register(\`experience_details.${index}.year`)} className="input-base" />
+              <input type="text" {...register(`experience_details.${index}.year`)} className="input-base" />
               {errors.experience_details?.[index]?.year && <p className="text-red-500 text-sm mt-1">{errors.experience_details[index]?.year?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Responsibilities/Achievements (Bullets)</label>
               {field.bullets.map((bullet, bulletIndex) => (
                 <div key={bulletIndex} className="flex space-x-2 mb-1">
-                  <input type="text" {...register(\`experience_details.${index}.bullets.${bulletIndex}`)} className="input-base flex-1" />
+                  <input type="text" {...register(`experience_details.${index}.bullets.${bulletIndex}`)} className="input-base flex-1" />
                   <button type="button" onClick={() => {
                     const currentBullets = control._fields.experience_details?.[index]?.bullets;
                     if (currentBullets && currentBullets.length > 1) {
                       const newBullets = [...currentBullets];
                       newBullets.splice(bulletIndex, 1);
-                      control.setValue(\`experience_details.${index}.bullets`, newBullets as any);
+                      control.setValue(`experience_details.${index}.bullets`, newBullets as any);
                     }
                   }} className="text-red-500 hover:text-red-700">
                     <Trash2 className="w-4 h-4" />
@@ -664,7 +664,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                 type="button"
                 onClick={() => {
                   const currentBullets = control._fields.experience_details?.[index]?.bullets || [];
-                  control.setValue(\`experience_details.${index}.bullets`, [...currentBullets, ''] as any);
+                  control.setValue(`experience_details.${index}.bullets`, [...currentBullets, ''] as any);
                 }}
                 className="text-blue-600 hover:text-blue-700 text-sm mt-1"
               >
@@ -674,7 +674,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Location (Optional)</label>
-              <input type="text" {...register(\`experience_details.${index}.location`)} className="input-base" />
+              <input type="text" {...register(`experience_details.${index}.location`)} className="input-base" />
             </div>
           </div>
         ))}
@@ -703,14 +703,14 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <input type="text" {...register(\`skills_details.${index}.category`)} className="input-base" />
+              <input type="text" {...register(`skills_details.${index}.category`)} className="input-base" />
               {errors.skills_details?.[index]?.category && <p className="text-red-500 text-sm mt-1">{errors.skills_details[index]?.category?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Skills (comma-separated)</label>
               <input
                 type="text"
-                {...register(\`skills_details.${index}.list`, {
+                {...register(`skills_details.${index}.list`, {
                   setValueAs: (value: string) => value.split(',').map(s => s.trim()).filter(Boolean),
                 })}
                 defaultValue={field.list?.join(', ') || ''}
@@ -745,25 +745,25 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Project Title</label>
-              <input type="text" {...register(\`projects_details.${index}.title`)} className="input-base" />
+              <input type="text" {...register(`projects_details.${index}.title`)} className="input-base" />
               {errors.projects_details?.[index]?.title && <p className="text-red-500 text-sm mt-1">{errors.projects_details[index]?.title?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">GitHub URL (Optional)</label>
-              <input type="url" {...register(\`projects_details.${index}.githubUrl`)} className="input-base" />
+              <input type="url" {...register(`projects_details.${index}.githubUrl`)} className="input-base" />
               {errors.projects_details?.[index]?.githubUrl && <p className="text-red-500 text-sm mt-1">{errors.projects_details[index]?.githubUrl?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description (Bullets)</label>
               {field.bullets.map((bullet, bulletIndex) => (
                 <div key={bulletIndex} className="flex space-x-2 mb-1">
-                  <input type="text" {...register(\`projects_details.${index}.bullets.${bulletIndex}`)} className="input-base flex-1" />
+                  <input type="text" {...register(`projects_details.${index}.bullets.${bulletIndex}`)} className="input-base flex-1" />
                   <button type="button" onClick={() => {
                     const currentBullets = control._fields.projects_details?.[index]?.bullets;
                     if (currentBullets && currentBullets.length > 1) {
                       const newBullets = [...currentBullets];
                       newBullets.splice(bulletIndex, 1);
-                      control.setValue(\`projects_details.${index}.bullets`, newBullets as any);
+                      control.setValue(`projects_details.${index}.bullets`, newBullets as any);
                     }
                   }} className="text-red-500 hover:text-red-700">
                     <Trash2 className="w-4 h-4" />
@@ -774,7 +774,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                 type="button"
                 onClick={() => {
                   const currentBullets = control._fields.projects_details?.[index]?.bullets || [];
-                  control.setValue(\`projects_details.${index}.bullets`, [...currentBullets, ''] as any);
+                  control.setValue(`projects_details.${index}.bullets`, [...currentBullets, ''] as any);
                 }}
                 className="text-blue-600 hover:text-blue-700 text-sm mt-1"
               >
@@ -809,12 +809,12 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-              <input type="text" {...register(\`certifications_details.${index}.title`)} className="input-base" />
+              <input type="text" {...register(`certifications_details.${index}.title`)} className="input-base" />
               {errors.certifications_details?.[index]?.title && <p className="text-red-500 text-sm mt-1">{errors.certifications_details[index]?.title?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
-              <textarea {...register(\`certifications_details.${index}.description`)} className="input-base h-16 resize-y" />
+              <textarea {...register(`certifications_details.${index}.description`)} className="input-base h-16 resize-y" />
             </div>
           </div>
         ))}
@@ -938,7 +938,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                     <p className="font-medium text-gray-900 capitalize">{transaction.type.replace(/_/g, ' ')}</p>
                     <p className="text-sm text-gray-600">{new Date(transaction.created_at).toLocaleDateString()}</p>
                   </div>
-                  <div className={\`font-bold text-lg ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <div className={`font-bold text-lg ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
                     ₹{transaction.amount.toFixed(2)}
                   </div>
                 </div>
@@ -1062,7 +1062,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
           <nav className="flex space-x-8 px-6">
             <button
               onClick={() => setCurrentView('profile')}
-              className={\`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
                 currentView === 'profile'
                   ? 'border-blue-500 text-blue-600 dark:border-neon-cyan-400 dark:text-neon-cyan-400'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-dark-200'
@@ -1072,7 +1072,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
             </button>
             <button
               onClick={() => setCurrentView('wallet')}
-              className={\`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
                 currentView === 'wallet'
                   ? 'border-blue-500 text-blue-600 dark:border-neon-cyan-400 dark:text-neon-cyan-400'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-dark-200'
