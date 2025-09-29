@@ -555,7 +555,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Degree</label>
-              <input type="text" {...register(\`education_details.${index}.degree`)} className="input-base" />
+              <input type="text" {...register(`education_details.${index}.degree`)} className="input-base" />
               {errors.education_details?.[index]?.degree && <p className="text-red-500 text-sm mt-1">{errors.education_details[index]?.degree?.message}</p>}
             </div>
             <div>
