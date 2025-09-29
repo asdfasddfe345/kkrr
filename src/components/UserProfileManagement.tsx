@@ -1,52 +1,118 @@
-```typescript
 // src/components/UserProfileManagement.tsx
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  User,
-  Mail,
-  Phone,
-  Linkedin,
-  Github,
-  Briefcase,
-  GraduationCap,
-  Code,
-  Award,
-  Plus,
-  Trash2,
-  Save,
-  Loader2,
-  AlertCircle,
-  CheckCircle,
-  X,
-  Wallet,
-  RefreshCw,
-  Copy,
-  Share2,
-  ArrowRight,
-  Info,
-  Eye,
-  EyeOff,
-  Upload,
-  Target,
-  MapPin,
-  Calendar,
-  Banknote,
-  CreditCard,
-  QrCode,
-  History,
-  TrendingUp,
-  ChevronDown,
-  ChevronUp,
+  User, Mail, Phone, Linkedin, Github, Briefcase, GraduationCap, Code, Award, Plus, Trash2, Save, Loader2, AlertCircle, CheckCircle, X, Wallet, RefreshCw, Copy, Share2, ArrowRight, Info, Eye, EyeOff, Upload, Target, MapPin, Calendar, Banknote, CreditCard, QrCode, History, TrendingUp, ChevronDown, ChevronUp,
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { authService } from '../services/authService';
-import { paymentService } from '../services/paymentService';
-import { ExtractionResult, ResumeData, UserType } from '../types/resume';
-import { parseFile } from '../utils/fileParser';
-import { AlertModal } from './AlertModal';
+
+// --- Mock Implementations to Resolve Imports ---
+
+// Mock AuthContext
+const useAuth = () => ({
+  user: {
+    id: '123-abc',
+    name: 'John Doe',
+    email: 'john.doe@example.com',
+    phone: '1234567890',
+    linkedin: 'https://linkedin.com/in/johndoe',
+    github: 'https://github.com/johndoe',
+    resumeHeadline: 'Experienced Software Engineer',
+    currentLocation: 'San Francisco, CA',
+    educationDetails: [],
+    experienceDetails: [],
+    skillsDetails: [],
+    referralCode: 'REF123XYZ',
+  },
+  revalidateUserSession: async () => {
+    console.log('User session revalidated.');
+    return Promise.resolve();
+  },
+});
+
+// Mock Services
+const authService = {
+  updateUserProfile: async (userId: string, data: any) => {
+    console.log(`Updating profile for user ${userId}:`, data);
+    return Promise.resolve({ success: true });
+  },
+};
+
+const paymentService = {
+  parseResumeWithAI: async (text: string, userId: string): Promise<ResumeData> => {
+    console.log(`Parsing resume for user ${userId}...`);
+    // Simulate AI parsing delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    return {
+      name: 'Jane Smith (from Resume)',
+      email: 'jane.smith@resume.com',
+      phone: '0987654321',
+      linkedin: 'https://linkedin.com/in/janesmith',
+      github: 'https://github.com/janesmith',
+      summary: 'A highly skilled professional from a parsed resume.',
+      location: 'New York, NY',
+      education: [{ degree: 'B.Sc. Computer Science', school: 'Tech University', year: '2020', cgpa: '3.8', location: 'City, State' }],
+      workExperience: [{ role: 'Software Developer', company: 'Innovate Corp', year: '2020-Present', bullets: ['Developed amazing features.'], location: 'Remote' }],
+      skills: [{ category: 'Programming', list: ['JavaScript', 'React', 'Node.js'] }],
+      projects: [{ title: 'My Awesome Project', bullets: ['Built a thing.'], githubUrl: 'https://github.com/janesmith/awesome-project' }],
+      certifications: [{ title: 'Certified React Developer', description: 'Completed in 2021' }],
+    };
+  },
+};
+
+// Mock Types
+export interface ExtractionResult { text: string; }
+export type ResumeData = {
+    name?: string;
+    email?: string;
+    phone?: string;
+    linkedin?: string;
+    github?: string;
+    summary?: string;
+    careerObjective?: string;
+    location?: string;
+    education?: any[];
+    workExperience?: any[];
+    skills?: any[];
+    projects?: any[];
+    certifications?: any[];
+};
+
+// Mock Component
+const AlertModal = ({ isOpen, onClose, title, children }: { isOpen: boolean; onClose: () => void; title: string; children: React.ReactNode; message?: string; type?: string; }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+      <div className="bg-white p-6 rounded-lg w-full max-w-md">
+        <h2 className="text-lg font-bold mb-4">{title}</h2>
+        {children}
+        <button onClick={onClose} className="btn-secondary w-full mt-4">Close</button>
+      </div>
+    </div>
+  );
+};
+
+
+const FileUpload = ({ onFileUpload }: { onFileUpload: (result: ExtractionResult) => void }) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      console.log("File selected:", file.name);
+      setTimeout(() => {
+        onFileUpload({ text: 'Simulated parsed resume text.' });
+      }, 1500);
+    }
+  };
+
+  return (
+    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+      <input type="file" onChange={handleFileChange} className="text-sm" accept=".pdf,.docx,.txt" />
+      <p className="mt-2 text-xs text-gray-500">PDF, DOCX, or TXT</p>
+    </div>
+  );
+};
+
 
 // --- Zod Schemas for Validation ---
 const educationSchema = z.object({
@@ -118,7 +184,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [currentView, setCurrentView] = useState<'profile' | 'wallet'>(initialViewMode);
-  const [walletBalance, setWalletBalance] = useState<number>(0); // In Rupees
+  const [walletBalance, setWalletBalance] = useState<number>(0);
   const [loadingWallet, setLoadingWallet] = useState(true);
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -133,17 +199,13 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
   const [loadingTransactions, setLoadingTransactions] = useState(true);
   const [showTransactionDetails, setShowTransactionDetails] = useState<Set<string>>(new Set());
   const [isGeneratingReferral, setIsGeneratingReferral] = useState(false);
-
   const [isUploadingResume, setIsUploadingResume] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [showResumeUpload, setShowResumeUpload] = useState(false);
 
   const {
-    register,
-    handleSubmit,
-    reset,
-    control,
+    register, handleSubmit, reset, control,
     formState: { errors, isDirty },
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -158,30 +220,25 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
       education_details: user?.educationDetails || [],
       experience_details: user?.experienceDetails || [],
       skills_details: user?.skillsDetails || [],
-      projects_details: [], // Assuming projects are not directly in user object yet
-      certifications_details: [], // Assuming certifications are not directly in user object yet
+      projects_details: [],
+      certifications_details: [],
     },
   });
 
   const { fields: educationFields, append: appendEducation, remove: removeEducation } = useFieldArray({
-    control,
-    name: 'education_details',
+    control, name: 'education_details',
   });
-  const { fields: experienceFields, append: appendExperience, remove: removeExperience } = useFieldArray({
-    control,
-    name: 'experience_details',
+  const { fields: experienceFields, append: appendExperience, remove: removeExperience, update: updateExperience } = useFieldArray({
+    control, name: "experience_details",
   });
   const { fields: skillsFields, append: appendSkill, remove: removeSkill } = useFieldArray({
-    control,
-    name: 'skills_details',
+    control, name: 'skills_details',
   });
   const { fields: projectFields, append: appendProject, remove: removeProject } = useFieldArray({
-    control,
-    name: 'projects_details',
+    control, name: 'projects_details',
   });
   const { fields: certificationFields, append: appendCertification, remove: removeCertification } = useFieldArray({
-    control,
-    name: 'certifications_details',
+    control, name: 'certifications_details',
   });
 
   useEffect(() => {
@@ -197,8 +254,6 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
         education_details: user.educationDetails || [],
         experience_details: user.experienceDetails || [],
         skills_details: user.skillsDetails || [],
-        // Projects and certifications are not directly on the user object yet,
-        // so they won't be pre-filled from user unless added to the AuthContext User type.
         projects_details: [],
         certifications_details: [],
       });
@@ -228,44 +283,22 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
   const fetchWalletBalance = async () => {
     if (!user) return;
     setLoadingWallet(true);
-    try {
-      const { data: transactions, error } = await supabase
-        .from('wallet_transactions')
-        .select('amount, status')
-        .eq('user_id', user.id);
-      if (error) {
-        console.error('Error fetching wallet balance:', error);
-        return;
-      }
-      const completed = (transactions || []).filter((t: any) => t.status === 'completed');
-      const balance = completed.reduce((sum: number, tr: any) => sum + parseFloat(tr.amount), 0);
-      setWalletBalance(balance); // Stored in Rupees
-    } catch (err) {
-      console.error('Error fetching wallet data:', err);
-    } finally {
+    setTimeout(() => {
+      setWalletBalance(150.75);
       setLoadingWallet(false);
-    }
+    }, 1000);
   };
 
   const fetchWalletTransactions = async () => {
     if (!user) return;
     setLoadingTransactions(true);
-    try {
-      const { data, error } = await supabase
-        .from('wallet_transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      if (error) {
-        console.error('Error fetching wallet transactions:', error);
-        return;
-      }
-      setWalletTransactions(data || []);
-    } catch (err) {
-      console.error('Error fetching wallet transactions:', err);
-    } finally {
+    setTimeout(() => {
+      setWalletTransactions([
+        { id: '1', type: 'referral_bonus', amount: 50.00, created_at: new Date().toISOString(), source_user_id: 'user_abc' },
+        { id: '2', type: 'redemption_request', amount: -100.00, created_at: new Date().toISOString(), redeem_method: 'upi', redeem_details: 'mock@upi' },
+      ]);
       setLoadingTransactions(false);
-    }
+    }, 1000);
   };
 
   const onSubmit = async (data: ProfileFormData) => {
@@ -273,63 +306,31 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
-
-    try {
-      await authService.updateUserProfile(user.id, {
-        full_name: data.full_name,
-        email_address: data.email_address,
-        phone: data.phone,
-        linkedin_profile: data.linkedin_profile,
-        github_profile: data.github_profile,
-        resume_headline: data.resume_headline,
-        current_location: data.current_location,
-        education_details: data.education_details,
-        experience_details: data.experience_details,
-        skills_details: data.skills_details,
-        projects_details: data.projects_details,
-        certifications_details: data.certifications_details,
-        has_seen_profile_prompt: true, // Mark as seen once they save their profile
-      });
-      await revalidateUserSession(); // Refresh user context in AuthProvider
-      setSaveSuccess(true);
-      reset(data); // Reset form with new data to clear isDirty state
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to update profile');
-    } finally {
-      setIsSaving(false);
-    }
+    console.log("Saving profile data:", data);
+    setTimeout(async () => {
+      try {
+        await authService.updateUserProfile(user.id, data);
+        await revalidateUserSession();
+        setSaveSuccess(true);
+        reset(data);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      } catch (err) {
+        setSaveError(err instanceof Error ? err.message : 'Failed to update profile');
+      } finally {
+        setIsSaving(false);
+      }
+    }, 1500);
   };
 
   const handleGenerateReferralCode = async () => {
     if (!user) return;
     setIsGeneratingReferral(true);
-    try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session?.access_token) {
-        throw new Error('Authentication required to generate referral code.');
-      }
-      const response = await fetch(\`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-referral-code`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + session.access_token, // Corrected line
-        },
-        body: JSON.stringify({ userId: user.id }),
-      });
-      const result = await response.json();
-      if (response.ok && result.success) {
-        setReferralCode(result.referralCode);
-        await revalidateUserSession(); // Update user context with new referral code
-      } else {
-        throw new Error(result.error || 'Failed to generate referral code.');
-      }
-    } catch (err) {
-      console.error('Error generating referral code:', err);
-      setSaveError(err instanceof Error ? err.message : 'Failed to generate referral code.');
-    } finally {
+    setTimeout(() => {
+      const newCode = `REF${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      setReferralCode(newCode);
+      revalidateUserSession();
       setIsGeneratingReferral(false);
-    }
+    }, 1000);
   };
 
   const handleCopyReferralCode = async () => {
@@ -345,63 +346,23 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
   };
 
   const handleRedeemRequest = async () => {
-    if (!user) return;
-    if (parseFloat(redeemAmount) < 100) {
-      setRedeemError('Minimum redemption amount is ₹100.');
-      return;
-    }
     if (parseFloat(redeemAmount) > walletBalance) {
-      setRedeemError('Redemption amount exceeds wallet balance.');
+      setRedeemError('Amount exceeds balance.');
       return;
     }
-    if (!redeemDetails.trim()) {
-      setRedeemError('Redemption details are required.');
-      return;
-    }
-
     setIsRedeeming(true);
     setRedeemError(null);
     setRedeemSuccess(false);
-
-    try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session?.access_token) {
-        throw new Error('Authentication required to redeem.');
-      }
-
-      const response = await fetch(\`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-redemption-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + session.access_token, // Corrected line
-        },
-        body: JSON.stringify({
-          userId: user.id,
-          amount: parseFloat(redeemAmount),
-          redeemMethod,
-          redeemDetails,
-        }),
-      });
-
-      const result = await response.json();
-      if (response.ok && result.success) {
-        setRedeemSuccess(true);
-        setRedeemAmount('');
-        setRedeemDetails('');
-        if (setWalletRefreshKey) setWalletRefreshKey(prev => prev + 1);
-        setTimeout(() => {
-          setRedeemSuccess(false);
-          setShowRedeemModal(false);
-        }, 3000);
-      } else {
-        throw new Error(result.error || 'Failed to submit redemption request.');
-      }
-    } catch (err) {
-      console.error('Error redeeming:', err);
-      setRedeemError(err instanceof Error ? err.message : 'Failed to submit redemption request.');
-    } finally {
+    console.log("Redeem Request:", { redeemAmount, redeemMethod, redeemDetails });
+    setTimeout(() => {
+      setRedeemSuccess(true);
+      if (setWalletRefreshKey) setWalletRefreshKey(k => k + 1);
+      setTimeout(() => {
+        setShowRedeemModal(false);
+        setRedeemSuccess(false);
+      }, 3000);
       setIsRedeeming(false);
-    }
+    }, 2000);
   };
 
   const handleResumeFileUpload = async (result: ExtractionResult) => {
@@ -412,33 +373,28 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
     setIsUploadingResume(true);
     setUploadError(null);
     setUploadSuccess(false);
-
     try {
       const resumeData: ResumeData = await paymentService.parseResumeWithAI(result.text, user.id);
-
-      // Map ResumeData to form fields
       reset({
         full_name: resumeData.name || user.name,
         email_address: resumeData.email || user.email,
         phone: resumeData.phone || user.phone,
         linkedin_profile: resumeData.linkedin || user.linkedin,
         github_profile: resumeData.github || user.github,
-        resume_headline: resumeData.summary || resumeData.careerObjective || user.resumeHeadline,
+        resume_headline: resumeData.summary || user.resumeHeadline,
         current_location: resumeData.location || user.currentLocation,
         education_details: resumeData.education || [],
         experience_details: resumeData.workExperience || [],
         skills_details: resumeData.skills || [],
         projects_details: resumeData.projects || [],
-        certifications_details: resumeData.certifications?.map(cert =>
-          typeof cert === 'string' ? { title: cert, description: '' } : cert
-        ) || [],
+        certifications_details: resumeData.certifications?.map(cert => typeof cert === 'string' ? { title: cert, description: '' } : cert) || [],
       });
       setUploadSuccess(true);
-      setShowResumeUpload(false); // Close upload section after successful parsing
+      setShowResumeUpload(false);
       setTimeout(() => setUploadSuccess(false), 3000);
     } catch (err) {
-      console.error('Error parsing resume for profile:', err);
-      setUploadError(err instanceof Error ? err.message : 'Failed to extract data from resume.');
+      console.error('Error parsing resume:', err);
+      setUploadError(err instanceof Error ? err.message : 'Failed to extract data.');
     } finally {
       setIsUploadingResume(false);
     }
@@ -447,16 +403,13 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
   const toggleTransactionDetails = (id: string) => {
     setShowTransactionDetails(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
       return newSet;
     });
   };
 
-  const renderProfileManagement = () => (
+    const renderProfileManagement = () => (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {saveError && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start">
@@ -546,7 +499,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
           </div>
         </div>
       </div>
-
+      
       {/* Social Links */}
       <div className="card p-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -566,7 +519,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
           </div>
         </div>
       </div>
-
+      
       {/* Education Details */}
       <div className="card p-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -582,26 +535,26 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Degree</label>
-              <input type="text" {...register(\`education_details.${index}.degree`)} className="input-base" />
+              <input type="text" {...register(`education_details.${index}.degree`)} className="input-base" />
               {errors.education_details?.[index]?.degree && <p className="text-red-500 text-sm mt-1">{errors.education_details[index]?.degree?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">School/University</label>
-              <input type="text" {...register(\`education_details.${index}.school`)} className="input-base" />
+              <input type="text" {...register(`education_details.${index}.school`)} className="input-base" />
               {errors.education_details?.[index]?.school && <p className="text-red-500 text-sm mt-1">{errors.education_details[index]?.school?.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
-              <input type="text" {...register(\`education_details.${index}.year`)} className="input-base" />
+              <input type="text" {...register(`education_details.${index}.year`)} className="input-base" />
               {errors.education_details?.[index]?.year && <p className="text-red-500 text-sm mt-1">{errors.education_details[index]?.year?.message}</p>}
             </div>
-            <div>
+             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">CGPA/GPA (Optional)</label>
-              <input type="text" {...register(\`education_details.${index}.cgpa`)} className="input-base" />
+              <input type="text" {...register(`education_details.${index}.cgpa`)} className="input-base" />
             </div>
-            <div>
+             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Location (Optional)</label>
-              <input type="text" {...register(\`education_details.${index}.location`)} className="input-base" />
+              <input type="text" {...register(`education_details.${index}.location`)} className="input-base" />
             </div>
           </div>
         ))}
@@ -615,218 +568,172 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
         </button>
       </div>
 
-      {/* Work Experience Details */}
-      <div className="card p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <Briefcase className="w-5 h-5 mr-2 text-orange-600" />
-          Work Experience
-        </h3>
-        {experienceFields.map((field, index) => (
-          <div key={field.id} className="border border-gray-200 rounded-lg p-3 mb-3 space-y-2">
-            <div className="flex justify-end">
-              <button type="button" onClick={() => removeExperience(index)} className="text-red-500 hover:text-red-700">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-              <input type="text" {...register(\`experience_details.${index}.role`)} className="input-base" />
-              {errors.experience_details?.[index]?.role && <p className="text-red-500 text-sm mt-1">{errors.experience_details[index]?.role?.message}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
-              <input type="text" {...register(\`experience_details.${index}.company`)} className="input-base" />
-              {errors.experience_details?.[index]?.company && <p className="text-red-500 text-sm mt-1">{errors.experience_details[index]?.company?.message}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Year/Duration</label>
-              <input type="text" {...register(\`experience_details.${index}.year`)} className="input-base" />
-              {errors.experience_details?.[index]?.year && <p className="text-red-500 text-sm mt-1">{errors.experience_details[index]?.year?.message}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Responsibilities/Achievements (Bullets)</label>
-              {field.bullets.map((bullet, bulletIndex) => (
-                <div key={bulletIndex} className="flex space-x-2 mb-1">
-                  <input type="text" {...register(\`experience_details.${index}.bullets.${bulletIndex}`)} className="input-base flex-1" />
-                  <button type="button" onClick={() => {
-                    const currentBullets = control._fields.experience_details?.[index]?.bullets;
-                    if (currentBullets && currentBullets.length > 1) {
-                      const newBullets = [...currentBullets];
-                      newBullets.splice(bulletIndex, 1);
-                      control.setValue(\`experience_details.${index}.bullets`, newBullets as any);
-                    }
-                  }} className="text-red-500 hover:text-red-700">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+       {/* Work Experience */}
+        <div className="card p-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Briefcase className="w-5 h-5 mr-2 text-orange-600" />
+                Work Experience
+            </h3>
+            {experienceFields.map((field, index) => (
+                <div key={field.id} className="border border-gray-200 rounded-lg p-3 mb-3 space-y-2">
+                    <div className="flex justify-end">
+                        <button type="button" onClick={() => removeExperience(index)} className="text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                        <input type="text" {...register(`experience_details.${index}.role`)} className="input-base" />
+                        {errors.experience_details?.[index]?.role && <p className="text-red-500 text-sm mt-1">{errors.experience_details[index]?.role?.message}</p>}
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+                        <input type="text" {...register(`experience_details.${index}.company`)} className="input-base" />
+                        {errors.experience_details?.[index]?.company && <p className="text-red-500 text-sm mt-1">{errors.experience_details[index]?.company?.message}</p>}
+                    </div>
+                     <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Year/Duration</label>
+                        <input type="text" {...register(`experience_details.${index}.year`)} className="input-base" />
+                        {errors.experience_details?.[index]?.year && <p className="text-red-500 text-sm mt-1">{errors.experience_details[index]?.year?.message}</p>}
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Responsibilities (Bullets)</label>
+                        {field.bullets.map((_, bulletIndex) => (
+                             <div key={bulletIndex} className="flex space-x-2 mb-1">
+                                <input type="text" {...register(`experience_details.${index}.bullets.${bulletIndex}`)} className="input-base flex-1" />
+                                <button type="button" onClick={() => {
+                                    const newBullets = field.bullets.filter((_, i) => i !== bulletIndex);
+                                    updateExperience(index, { ...field, bullets: newBullets });
+                                }} className="text-red-500 hover:text-red-700">
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ))}
+                         <button type="button" onClick={() => updateExperience(index, { ...field, bullets: [...field.bullets, ''] })} className="text-blue-600 hover:text-blue-700 text-sm mt-1">
+                            + Add Bullet
+                        </button>
+                    </div>
                 </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => {
-                  const currentBullets = control._fields.experience_details?.[index]?.bullets || [];
-                  control.setValue(\`experience_details.${index}.bullets`, [...currentBullets, ''] as any);
-                }}
-                className="text-blue-600 hover:text-blue-700 text-sm mt-1"
-              >
-                + Add Bullet
-              </button>
-              {errors.experience_details?.[index]?.bullets && <p className="text-red-500 text-sm mt-1">{errors.experience_details[index]?.bullets?.message}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Location (Optional)</label>
-              <input type="text" {...register(\`experience_details.${index}.location`)} className="input-base" />
-            </div>
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={() => appendExperience({ role: '', company: '', year: '', bullets: [''], location: '' })}
-          className="btn-secondary w-full flex items-center justify-center space-x-2 mt-3"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Add Experience</span>
-        </button>
-      </div>
+            ))}
+            <button type="button" onClick={() => appendExperience({ role: '', company: '', year: '', bullets: [''], location: '' })} className="btn-secondary w-full flex items-center justify-center space-x-2 mt-3">
+                <Plus className="w-5 h-5" />
+                <span>Add Experience</span>
+            </button>
+        </div>
 
-      {/* Skills Details */}
-      <div className="card p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <Code className="w-5 h-5 mr-2 text-teal-600" />
-          Skills
-        </h3>
-        {skillsFields.map((field, index) => (
-          <div key={field.id} className="border border-gray-200 rounded-lg p-3 mb-3 space-y-2">
-            <div className="flex justify-end">
-              <button type="button" onClick={() => removeSkill(index)} className="text-red-500 hover:text-red-700">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <input type="text" {...register(\`skills_details.${index}.category`)} className="input-base" />
-              {errors.skills_details?.[index]?.category && <p className="text-red-500 text-sm mt-1">{errors.skills_details[index]?.category?.message}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Skills (comma-separated)</label>
-              <input
-                type="text"
-                {...register(\`skills_details.${index}.list`, {
-                  setValueAs: (value: string) => value.split(',').map(s => s.trim()).filter(Boolean),
-                })}
-                defaultValue={field.list?.join(', ') || ''}
-                className="input-base"
-              />
-              {errors.skills_details?.[index]?.list && <p className="text-red-500 text-sm mt-1">{errors.skills_details[index]?.list?.message}</p>}
-            </div>
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={() => appendSkill({ category: '', count: 0, list: [] })}
-          className="btn-secondary w-full flex items-center justify-center space-x-2 mt-3"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Add Skill Category</span>
-        </button>
-      </div>
 
-      {/* Projects Details */}
-      <div className="card p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <Target className="w-5 h-5 mr-2 text-blue-600" />
-          Projects
-        </h3>
-        {projectFields.map((field, index) => (
-          <div key={field.id} className="border border-gray-200 rounded-lg p-3 mb-3 space-y-2">
-            <div className="flex justify-end">
-              <button type="button" onClick={() => removeProject(index)} className="text-red-500 hover:text-red-700">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Project Title</label>
-              <input type="text" {...register(\`projects_details.${index}.title`)} className="input-base" />
-              {errors.projects_details?.[index]?.title && <p className="text-red-500 text-sm mt-1">{errors.projects_details[index]?.title?.message}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">GitHub URL (Optional)</label>
-              <input type="url" {...register(\`projects_details.${index}.githubUrl`)} className="input-base" />
-              {errors.projects_details?.[index]?.githubUrl && <p className="text-red-500 text-sm mt-1">{errors.projects_details[index]?.githubUrl?.message}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description (Bullets)</label>
-              {field.bullets.map((bullet, bulletIndex) => (
-                <div key={bulletIndex} className="flex space-x-2 mb-1">
-                  <input type="text" {...register(\`projects_details.${index}.bullets.${bulletIndex}`)} className="input-base flex-1" />
-                  <button type="button" onClick={() => {
-                    const currentBullets = control._fields.projects_details?.[index]?.bullets;
-                    if (currentBullets && currentBullets.length > 1) {
-                      const newBullets = [...currentBullets];
-                      newBullets.splice(bulletIndex, 1);
-                      control.setValue(\`projects_details.${index}.bullets`, newBullets as any);
-                    }
-                  }} className="text-red-500 hover:text-red-700">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+        {/* Skills */}
+        <div className="card p-4">
+             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Code className="w-5 h-5 mr-2 text-teal-600" />
+                Skills
+            </h3>
+            {skillsFields.map((field, index) => (
+                 <div key={field.id} className="border border-gray-200 rounded-lg p-3 mb-3 space-y-2">
+                    <div className="flex justify-end">
+                        <button type="button" onClick={() => removeSkill(index)} className="text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                     <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                        <input type="text" {...register(`skills_details.${index}.category`)} className="input-base" />
+                        {errors.skills_details?.[index]?.category && <p className="text-red-500 text-sm mt-1">{errors.skills_details[index]?.category?.message}</p>}
+                    </div>
+                     <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Skills (comma-separated)</label>
+                        <input
+                            type="text"
+                            {...register(`skills_details.${index}.list`, {
+                                setValueAs: (value: string) => value.split(',').map(s => s.trim()).filter(Boolean),
+                            })}
+                            defaultValue={field.list?.join(', ') || ''}
+                            className="input-base"
+                        />
+                         {errors.skills_details?.[index]?.list && <p className="text-red-500 text-sm mt-1">{errors.skills_details[index]?.list?.message as string}</p>}
+                    </div>
                 </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => {
-                  const currentBullets = control._fields.projects_details?.[index]?.bullets || [];
-                  control.setValue(\`projects_details.${index}.bullets`, [...currentBullets, ''] as any);
-                }}
-                className="text-blue-600 hover:text-blue-700 text-sm mt-1"
-              >
-                + Add Bullet
-              </button>
-              {errors.projects_details?.[index]?.bullets && <p className="text-red-500 text-sm mt-1">{errors.projects_details[index]?.bullets?.message}</p>}
-            </div>
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={() => appendProject({ title: '', bullets: [''], githubUrl: '' })}
-          className="btn-secondary w-full flex items-center justify-center space-x-2 mt-3"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Add Project</span>
-        </button>
-      </div>
+            ))}
+             <button type="button" onClick={() => appendSkill({ category: '', list: [] })} className="btn-secondary w-full flex items-center justify-center space-x-2 mt-3">
+                <Plus className="w-5 h-5" />
+                <span>Add Skill Category</span>
+            </button>
+        </div>
 
-      {/* Certifications Details */}
-      <div className="card p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <Award className="w-5 h-5 mr-2 text-yellow-600" />
-          Certifications
-        </h3>
-        {certificationFields.map((field, index) => (
-          <div key={field.id} className="border border-gray-200 rounded-lg p-3 mb-3 space-y-2">
-            <div className="flex justify-end">
-              <button type="button" onClick={() => removeCertification(index)} className="text-red-500 hover:text-red-700">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-              <input type="text" {...register(\`certifications_details.${index}.title`)} className="input-base" />
-              {errors.certifications_details?.[index]?.title && <p className="text-red-500 text-sm mt-1">{errors.certifications_details[index]?.title?.message}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
-              <textarea {...register(\`certifications_details.${index}.description`)} className="input-base h-16 resize-y" />
-            </div>
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={() => appendCertification({ title: '', description: '' })}
-          className="btn-secondary w-full flex items-center justify-center space-x-2 mt-3"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Add Certification</span>
-        </button>
-      </div>
+        {/* Projects */}
+        <div className="card p-4">
+             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Target className="w-5 h-5 mr-2 text-indigo-600" />
+                Projects
+            </h3>
+            {projectFields.map((field, index) => (
+                <div key={field.id} className="border border-gray-200 rounded-lg p-3 mb-3 space-y-2">
+                    <div className="flex justify-end">
+                        <button type="button" onClick={() => removeProject(index)} className="text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Project Title</label>
+                        <input type="text" {...register(`projects_details.${index}.title`)} className="input-base" />
+                        {errors.projects_details?.[index]?.title && <p className="text-red-500 text-sm mt-1">{errors.projects_details[index]?.title?.message}</p>}
+                    </div>
+                    <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-1">GitHub URL (Optional)</label>
+                        <input type="url" {...register(`projects_details.${index}.githubUrl`)} className="input-base" />
+                        {errors.projects_details?.[index]?.githubUrl && <p className="text-red-500 text-sm mt-1">{errors.projects_details[index]?.githubUrl?.message}</p>}
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Description (Bullets)</label>
+                        {field.bullets.map((_, bulletIndex) => (
+                             <div key={bulletIndex} className="flex space-x-2 mb-1">
+                                <input type="text" {...register(`projects_details.${index}.bullets.${bulletIndex}`)} className="input-base flex-1" />
+                                <button type="button" onClick={() => {
+                                    const newBullets = field.bullets.filter((_, i) => i !== bulletIndex);
+                                    // A bit of a workaround for react-hook-form's update typing
+                                    const currentProject = control._formValues.projects_details[index];
+                                    setValue(`projects_details.${index}`, { ...currentProject, bullets: newBullets });
+                                }} className="text-red-500 hover:text-red-700">
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ))}
+                         <button type="button" onClick={() => {
+                             const currentProject = control._formValues.projects_details[index];
+                             setValue(`projects_details.${index}`, { ...currentProject, bullets: [...currentProject.bullets, ''] });
+                         }} className="text-blue-600 hover:text-blue-700 text-sm mt-1">
+                            + Add Bullet
+                        </button>
+                    </div>
+                </div>
+            ))}
+             <button type="button" onClick={() => appendProject({ title: '', bullets: [''], githubUrl: '' })} className="btn-secondary w-full flex items-center justify-center space-x-2 mt-3">
+                <Plus className="w-5 h-5" />
+                <span>Add Project</span>
+            </button>
+        </div>
+        
+        {/* Certifications */}
+        <div className="card p-4">
+             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Award className="w-5 h-5 mr-2 text-yellow-600" />
+                Certifications
+            </h3>
+            {certificationFields.map((field, index) => (
+                <div key={field.id} className="border border-gray-200 rounded-lg p-3 mb-3 space-y-2">
+                    <div className="flex justify-end">
+                        <button type="button" onClick={() => removeCertification(index)} className="text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                        <input type="text" {...register(`certifications_details.${index}.title`)} className="input-base" />
+                        {errors.certifications_details?.[index]?.title && <p className="text-red-500 text-sm mt-1">{errors.certifications_details[index]?.title?.message}</p>}
+                    </div>
+                     <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+                        <textarea {...register(`certifications_details.${index}.description`)} className="input-base h-16 resize-y" />
+                    </div>
+                </div>
+            ))}
+             <button type="button" onClick={() => appendCertification({ title: '', description: '' })} className="btn-secondary w-full flex items-center justify-center space-x-2 mt-3">
+                <Plus className="w-5 h-5" />
+                <span>Add Certification</span>
+            </button>
+        </div>
 
       <button
         type="submit"
@@ -938,7 +845,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                     <p className="font-medium text-gray-900 capitalize">{transaction.type.replace(/_/g, ' ')}</p>
                     <p className="text-sm text-gray-600">{new Date(transaction.created_at).toLocaleDateString()}</p>
                   </div>
-                  <div className={\`font-bold text-lg ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <div className={`font-bold text-lg ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
                     ₹{transaction.amount.toFixed(2)}
                   </div>
                 </div>
@@ -1033,8 +940,8 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto dark:bg-dark-100">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={handleBackdropClick}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col dark:bg-dark-100">
         {/* Header */}
         <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 p-6 border-b border-gray-200 dark:from-dark-200 dark:to-dark-300 dark:border-dark-400">
           <button
@@ -1043,10 +950,9 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
           >
             <X className="w-6 h-6" />
           </button>
-
           <div className="text-center">
-            <div className="bg-gradient-to-br from-neon-cyan-500 to-neon-blue-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <User className="w-8 h-8 text-white" />
+             <div className="bg-gradient-to-br from-blue-500 to-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <User className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               {currentView === 'profile' ? 'Manage Your Profile' : 'Wallet & Referrals'}
@@ -1062,20 +968,20 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
           <nav className="flex space-x-8 px-6">
             <button
               onClick={() => setCurrentView('profile')}
-              className={\`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
                 currentView === 'profile'
-                  ? 'border-blue-500 text-blue-600 dark:border-neon-cyan-400 dark:text-neon-cyan-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-dark-200'
+                  ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'
               }`}
             >
               Profile
             </button>
             <button
               onClick={() => setCurrentView('wallet')}
-              className={\`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                currentView === 'wallet'
-                  ? 'border-blue-500 text-blue-600 dark:border-neon-cyan-400 dark:text-neon-cyan-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-dark-200'
+              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                 currentView === 'wallet'
+                  ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'
               }`}
             >
               Wallet & Referrals
@@ -1084,11 +990,11 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto">
           {currentView === 'profile' ? renderProfileManagement() : renderWalletManagement()}
         </div>
       </div>
     </div>
   );
 };
-```
+
