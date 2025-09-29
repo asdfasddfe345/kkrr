@@ -35,14 +35,14 @@ const useAuth = () => ({
 // Mock Services
 const authService = {
   updateUserProfile: async (userId: string, data: any) => {
-    console.log(`Updating profile for user ${userId}:`, data);
+    console.log(\`Updating profile for user ${userId}:`, data);
     return Promise.resolve({ success: true });
   },
 };
 
 const paymentService = {
   parseResumeWithAI: async (text: string, userId: string): Promise<ResumeData> => {
-    console.log(`Parsing resume for user ${userId}...`);
+    console.log(\`Parsing resume for user ${userId}...`);
     // Simulate AI parsing delay
     await new Promise(resolve => setTimeout(resolve, 1500));
     return {
@@ -222,7 +222,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
       experience_details: user?.experienceDetails || [],
       skills_details: user?.skillsDetails || [],
       projects_details: [], // Projects and certifications are not directly on the user object yet,
-      certifications_details: [], // so they won't be pre-filled from `user` unless added to the AuthContext User type.
+      certifications_details: [], // so they won't be pre-filled from \`user` unless added to the AuthContext User type.
     },
   });
 
