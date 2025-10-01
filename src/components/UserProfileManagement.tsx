@@ -378,39 +378,28 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
       const resumeData: ResumeData = await mockPaymentService.parseResumeWithAI(result.text);
       console.log('Parsed Resume Data from mockPaymentService:', resumeData); // Diagnostic Log 1
 
-      // Map parsed data to form fields using setValue
-      setValue('full_name', resumeData.name || '');
-      setValue('email_address', resumeData.email || '');
-      setValue('phone', resumeData.phone || '');
-      setValue('linkedin_profile', resumeData.linkedin || '');
-      setValue('github_profile', resumeData.github || '');
-      setValue('resume_headline', resumeData.summary || resumeData.careerObjective || '');
-      setValue('current_location', resumeData.location || '');
+      // Prepare data for reset
+      const newFormData: ProfileFormData = {
+        full_name: resumeData.name || '',
+        email_address: resumeData.email || '',
+        phone: resumeData.phone || '',
+        linkedin_profile: resumeData.linkedin || '',
+        github_profile: resumeData.github || '',
+        resume_headline: resumeData.summary || resumeData.careerObjective || '',
+        current_location: resumeData.location || '',
+        education_details: resumeData.education || [],
+        experience_details: resumeData.workExperience || [],
+        projects_details: resumeData.projects || [],
+        skills_details: resumeData.skills || [],
+        // Ensure certifications are mapped to the expected object format before setting
+        certifications_details: resumeData.certifications.map(cert =>
+          typeof cert === 'string' ? { title: cert, description: '' } : cert
+        ) || [],
+      };
 
-      // Use setValue for entire arrays to ensure react-hook-form updates correctly
-      console.log('ResumeData.education BEFORE setValue:', resumeData.education); // Diagnostic Log 2
-      setValue('education_details', resumeData.education || []);
-      console.log('Education fields AFTER setValue:', getValues('education_details')); // Diagnostic Log 3
-
-      console.log('ResumeData.workExperience BEFORE setValue:', resumeData.workExperience); // Diagnostic Log 4
-      setValue('experience_details', resumeData.workExperience || []);
-      console.log('Experience fields AFTER setValue:', getValues('experience_details')); // Diagnostic Log 5
-
-      console.log('ResumeData.projects BEFORE setValue:', resumeData.projects); // Diagnostic Log 6
-      setValue('projects_details', resumeData.projects || []);
-      console.log('Project fields AFTER setValue:', getValues('projects_details')); // Diagnostic Log 7
-
-      console.log('ResumeData.skills BEFORE setValue:', resumeData.skills); // Diagnostic Log 8
-      setValue('skills_details', resumeData.skills || []);
-      console.log('Skill fields AFTER setValue:', getValues('skills_details')); // Diagnostic Log 9
-
-      console.log('ResumeData.certifications BEFORE setValue:', resumeData.certifications); // Diagnostic Log 10
-      // Ensure certifications are mapped to the expected object format before setting
-      const formattedCertifications = resumeData.certifications.map(cert =>
-        typeof cert === 'string' ? { title: cert, description: '' } : cert
-      );
-      setValue('certifications_details', formattedCertifications || []);
-      console.log('Certification fields AFTER setValue:', getValues('certifications_details')); // Diagnostic Log 11
+      // Reset the entire form with the new data
+      reset(newFormData);
+      console.log('Form data AFTER reset:', getValues()); // Diagnostic Log after reset
 
       setAlertContent({ title: 'Resume Parsed!', message: 'Your resume data has been pre-filled into the form.', type: 'success' });
       setShowAlert(true);
