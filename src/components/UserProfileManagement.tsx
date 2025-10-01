@@ -65,8 +65,8 @@ const mockPaymentService = {
       name: 'John Doe',
       phone: '+1234567890',
       email: 'john.doe@example.com',
-      linkedin: 'linkedin.com/in/johndoe',
-      github: 'github.com/johndoe',
+      linkedin: 'https://linkedin.com/in/johndoe',
+      github: 'https://github.com/johndoe',
       location: 'San Francisco, CA',
       targetRole: 'Software Engineer',
       summary: 'Highly motivated software engineer with 5 years of experience in web development.',
@@ -375,7 +375,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
     try {
       console.log('Extracted text for parsing:', result.text);
       const resumeData: ResumeData = await mockPaymentService.parseResumeWithAI(result.text);
-      console.log('Parsed Resume Data:', resumeData);
+      console.log('Parsed Resume Data from mockPaymentService:', resumeData); // Diagnostic Log 1
 
       // Map parsed data to form fields using setValue
       setValue('full_name', resumeData.name || '');
@@ -388,18 +388,27 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
 
       // Clear existing arrays before appending new data
       removeEducation();
+      console.log('ResumeData.education BEFORE append:', resumeData.education); // Diagnostic Log 2
       resumeData.education.forEach(edu => appendEducation(edu));
+      console.log('Education fields AFTER append:', educationFields); // Diagnostic Log 3
 
       removeExperience();
+      console.log('ResumeData.workExperience BEFORE append:', resumeData.workExperience); // Diagnostic Log 4
       resumeData.workExperience.forEach(exp => appendExperience(exp));
+      console.log('Experience fields AFTER append:', experienceFields); // Diagnostic Log 5
 
       removeProject();
+      console.log('ResumeData.projects BEFORE append:', resumeData.projects); // Diagnostic Log 6
       resumeData.projects.forEach(proj => appendProject(proj));
+      console.log('Project fields AFTER append:', projectFields); // Diagnostic Log 7
 
       removeSkill();
+      console.log('ResumeData.skills BEFORE append:', resumeData.skills); // Diagnostic Log 8
       resumeData.skills.forEach(skill => appendSkill(skill));
+      console.log('Skill fields AFTER append:', skillFields); // Diagnostic Log 9
 
       removeCertification();
+      console.log('ResumeData.certifications BEFORE append:', resumeData.certifications); // Diagnostic Log 10
       // Ensure certifications are mapped to the expected object format
       resumeData.certifications.forEach(cert => {
         if (typeof cert === 'string') {
@@ -408,6 +417,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
           appendCertification(cert);
         }
       });
+      console.log('Certification fields AFTER append:', certificationFields); // Diagnostic Log 11
 
       setAlertContent({ title: 'Resume Parsed!', message: 'Your resume data has been pre-filled into the form.', type: 'success' });
       setShowAlert(true);
