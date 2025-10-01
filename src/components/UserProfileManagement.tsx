@@ -61,6 +61,7 @@ const mockPaymentService = {
   parseResumeWithAI: async (resumeText: string): Promise<ResumeData> => {
     console.log('Parsing resume with AI (mocked)...');
     // Simulate AI parsing
+    // This mock returns static data. In a real scenario, this would be dynamic based on resumeText.
     return {
       name: 'John Doe',
       phone: '+1234567890',
@@ -396,6 +397,8 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
           typeof cert === 'string' ? { title: cert, description: '' } : cert
         ) || [],
       };
+
+      console.log('New form data prepared for reset:', newFormData); // Diagnostic Log 2
 
       // Reset the entire form with the new data
       reset(newFormData);
