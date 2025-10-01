@@ -379,6 +379,14 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
       const resumeData: ResumeData = await mockPaymentService.parseResumeWithAI(result.text);
       console.log('Parsed Resume Data from mockPaymentService:', resumeData); // Diagnostic Log 1
 
+      // Explicitly clear all field arrays before resetting
+      removeEducation();
+      removeExperience();
+      removeProject();
+      removeSkill();
+      removeCertification();
+      console.log('All field arrays explicitly cleared.');
+
       // Prepare data for reset
       const newFormData: ProfileFormData = {
         full_name: resumeData.name || '',
