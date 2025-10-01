@@ -5,15 +5,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   User as UserIcon,
-  Mail,
-  Phone,
   Linkedin,
   Github,
   Briefcase,
   Code,
   Award,
   GraduationCap,
-  MapPin,
   Plus,
   Trash2,
   Save,
@@ -22,24 +19,104 @@ import {
   CheckCircle,
   X,
   Wallet,
-  RefreshCw,
   Sparkles,
   ArrowRight,
-  Info,
   Target,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
-import { paymentService } from '../services/paymentService';
 import { FileUpload } from './FileUpload';
 import { ResumeData, ExtractionResult } from '../types/resume';
 import { AlertModal } from './AlertModal';
 import { DeviceManagement } from './security/DeviceManagement';
 import { supabase } from '../lib/supabaseClient';
 
-// ... (schemas and mocks unchanged)
+// Mock parsing service
+const mockPaymentService = {
+  parseResumeWithAI: async (resumeText: string): Promise<ResumeData> => {
+    return {
+      name: 'John Doe',
+      phone: '+1234567890',
+      email: 'john.doe@example.com',
+      linkedin: 'https://linkedin.com/in/johndoe',
+      github: 'https://github.com/johndoe',
+      location: 'San Francisco, CA',
+      targetRole: 'Software Engineer',
+      summary: 'Highly motivated software engineer with 5 years of experience in web development.',
+      education: [
+        { degree: 'M.Sc. Computer Science', school: 'University of Example', year: '2020', cgpa: '3.9', location: 'Example City' },
+      ],
+      workExperience: [
+        { role: 'Senior Software Engineer', company: 'Tech Solutions Inc.', year: '2022 - Present', bullets: ['Developed scalable microservices'] },
+      ],
+      projects: [
+        { title: 'E-commerce Platform', bullets: ['Developed a full-stack e-commerce platform'] },
+      ],
+      skills: [
+        { category: 'Languages', count: 3, list: ['JavaScript', 'Python', 'Java'] },
+      ],
+      certifications: [{ title: 'AWS Certified Developer', description: 'Certified in AWS development practices.' }],
+      achievements: ['Awarded Employee of the Year'],
+    };
+  },
+};
 
-// Inside the component
+// Zod Schemas
+const educationSchema = z.object({
+  degree: z.string().min(1, 'Degree is required'),
+  school: z.string().min(1, 'School is required'),
+  year: z.string().min(1, 'Year is required'),
+  cgpa: z.string().optional(),
+  location: z.string().optional(),
+});
+
+const workExperienceSchema = z.object({
+  role: z.string().min(1, 'Role is required'),
+  company: z.string().min(1, 'Company is required'),
+  year: z.string().min(1, 'Year is required'),
+  bullets: z.array(z.string().min(1, 'Bullet point cannot be empty')).min(1, 'At least one bullet point is required'),
+});
+
+const projectSchema = z.object({
+  title: z.string().min(1, 'Project title is required'),
+  bullets: z.array(z.string().min(1, 'Bullet point cannot be empty')).min(1, 'At least one bullet point is required'),
+});
+
+const skillSchema = z.object({
+  category: z.string().min(1, 'Category is required'),
+  list: z.array(z.string().min(1, 'Skill cannot be empty')).min(1, 'At least one skill is required'),
+});
+
+const certificationSchema = z.object({
+  title: z.string().min(1, 'Certification title is required'),
+  description: z.string().optional(),
+});
+
+const profileSchema = z.object({
+  full_name: z.string().min(1, 'Full name is required'),
+  email_address: z.string().email('Invalid email address'),
+  phone: z.string().optional(),
+  linkedin_profile: z.string().url('Invalid LinkedIn URL').optional().or(z.literal('')),
+  github_profile: z.string().url('Invalid GitHub URL').optional().or(z.literal('')),
+  resume_headline: z.string().optional(),
+  current_location: z.string().optional(),
+  education_details: z.array(educationSchema),
+  experience_details: z.array(workExperienceSchema),
+  projects_details: z.array(projectSchema),
+  skills_details: z.array(skillSchema),
+  certifications_details: z.array(certificationSchema),
+});
+
+type ProfileFormData = z.infer<typeof profileSchema>;
+
+interface UserProfileManagementProps {
+  isOpen: boolean;
+  onClose: () => void;
+  viewMode?: 'profile' | 'wallet';
+  walletRefreshKey: number;
+  setWalletRefreshKey: React.Dispatch<React.SetStateAction<number>>;
+}
+
 export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
   isOpen,
   onClose,
@@ -68,7 +145,6 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
     reset,
     control,
     formState: { errors, isDirty },
-    setValue,
     getValues,
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -88,7 +164,17 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
     },
   });
 
-  // field arrays setup (unchanged)...
+  const { fields: educationFields, append: appendEducation, remove: removeEducation } = useFieldArray({ control, name: 'education_details' });
+  const { fields: experienceFields, append: appendExperience, remove: removeExperience, update: updateExperience } = useFieldArray({ control, name: 'experience_details' });
+  const { fields: projectFields, append: appendProject, remove: removeProject, update: updateProject } = useFieldArray({ control, name: 'projects_details' });
+  const { fields: skillFields, append: appendSkill, remove: removeSkill, update: updateSkill } = useFieldArray({ control, name: 'skills_details' });
+  const { fields: certificationFields, append: appendCertification, remove: removeCertification } = useFieldArray({ control, name: 'certifications_details' });
+
+  useEffect(() => {
+    if (viewMode) {
+      setActiveTab(viewMode);
+    }
+  }, [viewMode]);
 
   // ---------------------------
   // FIXED Resume File Upload
@@ -107,18 +193,15 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
     }
 
     try {
-      console.log('Extracted text for parsing:', result.text);
       const resumeData: ResumeData = await mockPaymentService.parseResumeWithAI(result.text);
-      console.log('Parsed Resume Data from mockPaymentService:', resumeData);
 
-      // ✅ Prepare new form data directly
       const newFormData: ProfileFormData = {
         full_name: resumeData.name || '',
         email_address: resumeData.email || '',
         phone: resumeData.phone || '',
         linkedin_profile: resumeData.linkedin || '',
         github_profile: resumeData.github || '',
-        resume_headline: resumeData.summary || resumeData.careerObjective || '',
+        resume_headline: resumeData.summary || '',
         current_location: resumeData.location || '',
         education_details: resumeData.education || [],
         experience_details: resumeData.workExperience || [],
@@ -129,12 +212,8 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
         ) || [],
       };
 
-      console.log('New form data prepared for reset:', newFormData);
-
-      // ✅ Reset entire form, replacing arrays (fixes duplication issue)
+      // ✅ Reset entire form — replaces arrays instead of appending
       reset(newFormData, { keepDefaultValues: false });
-
-      console.log('Form data AFTER reset:', getValues());
 
       setAlertContent({
         title: 'Resume Parsed!',
@@ -143,7 +222,6 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
       });
       setShowAlert(true);
     } catch (error: any) {
-      console.error('Error parsing resume with AI:', error);
       setAlertContent({
         title: 'Parsing Failed',
         message: error.message || 'Failed to parse resume with AI. Please try again or fill manually.',
@@ -153,5 +231,21 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
     }
   };
 
-  // ... (rest of component remains unchanged: submit, redeem, UI rendering)
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-2 sm:p-4 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
+        {/* Header, Tabs, Form, Wallet, Security */}
+        {/* ... keep your original UI rendering logic here ... */}
+      </div>
+      <AlertModal
+        isOpen={showAlert}
+        onClose={() => setShowAlert(false)}
+        title={alertContent.title}
+        message={alertContent.message}
+        type={alertContent.type}
+      />
+    </div>
+  );
 };
