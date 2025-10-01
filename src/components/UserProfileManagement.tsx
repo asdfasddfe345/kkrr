@@ -380,12 +380,13 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
       console.log('Parsed Resume Data from mockPaymentService:', resumeData); // Diagnostic Log 1
 
       // Explicitly clear all field arrays before resetting
+      // This is the crucial step to prevent duplication
       removeEducation();
       removeExperience();
       removeProject();
       removeSkill();
       removeCertification();
-      console.log('All field arrays explicitly cleared.');
+      console.log('All field arrays explicitly cleared before reset.');
 
       // Prepare data for reset
       const newFormData: ProfileFormData = {
