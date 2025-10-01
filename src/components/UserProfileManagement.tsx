@@ -176,6 +176,7 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
     control,
     formState: { errors, isDirty },
     setValue, // Destructure setValue
+    getValues, // Destructure getValues for logging
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -377,30 +378,39 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
       const resumeData: ResumeData = await mockPaymentService.parseResumeWithAI(result.text);
       console.log('Parsed Resume Data from mockPaymentService:', resumeData); // Diagnostic Log 1
 
-      // Construct the full form data object
-      const newFormData: ProfileFormData = {
-        full_name: resumeData.name || '',
-        email_address: resumeData.email || '',
-        phone: resumeData.phone || '',
-        linkedin_profile: resumeData.linkedin || '',
-        github_profile: resumeData.github || '',
-        resume_headline: resumeData.summary || resumeData.careerObjective || '',
-        current_location: resumeData.location || '',
-        education_details: resumeData.education || [],
-        experience_details: resumeData.workExperience || [],
-        projects_details: resumeData.projects || [],
-        skills_details: resumeData.skills || [],
-        certifications_details: resumeData.certifications.map(cert => 
-          typeof cert === 'string' ? { title: cert, description: '' } : cert
-        ) || [],
-      };
+      // Map parsed data to form fields using setValue
+      setValue('full_name', resumeData.name || '');
+      setValue('email_address', resumeData.email || '');
+      setValue('phone', resumeData.phone || '');
+      setValue('linkedin_profile', resumeData.linkedin || '');
+      setValue('github_profile', resumeData.github || '');
+      setValue('resume_headline', resumeData.summary || resumeData.careerObjective || '');
+      setValue('current_location', resumeData.location || '');
 
-      console.log('New Form Data object before reset:', newFormData); // Diagnostic Log 2
+      // Use setValue for entire arrays to ensure react-hook-form updates correctly
+      console.log('ResumeData.education BEFORE setValue:', resumeData.education); // Diagnostic Log 2
+      setValue('education_details', resumeData.education || []);
+      console.log('Education fields AFTER setValue:', getValues('education_details')); // Diagnostic Log 3
 
-      // Use reset to update all form fields, including arrays
-      reset(newFormData);
+      console.log('ResumeData.workExperience BEFORE setValue:', resumeData.workExperience); // Diagnostic Log 4
+      setValue('experience_details', resumeData.workExperience || []);
+      console.log('Experience fields AFTER setValue:', getValues('experience_details')); // Diagnostic Log 5
 
-      console.log('Form fields should now be populated.'); // Diagnostic Log 3
+      console.log('ResumeData.projects BEFORE setValue:', resumeData.projects); // Diagnostic Log 6
+      setValue('projects_details', resumeData.projects || []);
+      console.log('Project fields AFTER setValue:', getValues('projects_details')); // Diagnostic Log 7
+
+      console.log('ResumeData.skills BEFORE setValue:', resumeData.skills); // Diagnostic Log 8
+      setValue('skills_details', resumeData.skills || []);
+      console.log('Skill fields AFTER setValue:', getValues('skills_details')); // Diagnostic Log 9
+
+      console.log('ResumeData.certifications BEFORE setValue:', resumeData.certifications); // Diagnostic Log 10
+      // Ensure certifications are mapped to the expected object format before setting
+      const formattedCertifications = resumeData.certifications.map(cert =>
+        typeof cert === 'string' ? { title: cert, description: '' } : cert
+      );
+      setValue('certifications_details', formattedCertifications || []);
+      console.log('Certification fields AFTER setValue:', getValues('certifications_details')); // Diagnostic Log 11
 
       setAlertContent({ title: 'Resume Parsed!', message: 'Your resume data has been pre-filled into the form.', type: 'success' });
       setShowAlert(true);
@@ -728,4 +738,204 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Skills (comma-separated)</label>
-                      {skillFields[index].list
+                      {skillFields[index].list.map((skill, skillIndex) => (
+                        <div key={skillIndex} className="flex items-center space-x-2 mb-2">
+                          <input
+                            type="text"
+                            {...register(`skills_details.${index}.list.${skillIndex}`)}
+                            className="input-base flex-1"
+                          />
+                          <button type="button" onClick={() => {
+                            const newList = [...skillFields[index].list];
+                            newList.splice(skillIndex, 1);
+                            updateSkill(index, { ...skillFields[index], list: newList });
+                          }} className="text-red-500 hover:text-red-700">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <button type="button" onClick={() => {
+                        const newList = [...skillFields[index].list, ''];
+                        updateSkill(index, { ...skillFields[index], list: newList });
+                      }} className="btn-secondary btn-sm mt-2 flex items-center space-x-1">
+                        <Plus className="w-3 h-3" /> <span>Add Skill</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <button type="button" onClick={() => appendSkill({ category: '', list: [] })} className="btn-secondary mt-4 flex items-center space-x-2">
+                  <Plus className="w-4 h-4" /> <span>Add Skill Category</span>
+                </button>
+              </div>
+
+              {/* Certifications Details */}
+              <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-200 dark:bg-dark-100 dark:border-dark-300">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                  <Award className="w-5 h-5 mr-2 text-yellow-600 dark:text-yellow-400" />
+                  Certifications
+                </h2>
+                {certificationFields.map((field, index) => (
+                  <div key={field.id} className="space-y-3 border-t border-gray-200 pt-4 mt-4 first:border-t-0 first:pt-0 first:mt-0 dark:border-dark-300">
+                    <div className="flex justify-end">
+                      <button type="button" onClick={() => removeCertification(index)} className="text-red-500 hover:text-red-700 text-sm flex items-center">
+                        <Trash2 className="w-4 h-4 mr-1" /> Remove
+                      </button>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Certification Title</label>
+                      <input type="text" {...register(`certifications_details.${index}.title`)} className="input-base" />
+                      {errors.certifications_details?.[index]?.title && <p className="text-red-500 text-xs mt-1">{errors.certifications_details[index]?.title?.message}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description (Optional)</label>
+                      <input type="text" {...register(`certifications_details.${index}.description`)} className="input-base" />
+                    </div>
+                  </div>
+                ))}
+                <button type="button" onClick={() => appendCertification({ title: '', description: '' })} className="btn-secondary mt-4 flex items-center space-x-2">
+                  <Plus className="w-4 h-4" /> <span>Add Certification</span>
+                </button>
+              </div>
+
+              {/* Save Button */}
+              <div className="flex justify-end pt-6 border-t border-gray-200 dark:border-dark-300">
+                <button type="submit" disabled={isSubmitting || !isDirty} className="btn-primary flex items-center space-x-2">
+                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                  <span>{isSubmitting ? 'Saving...' : 'Save Profile'}</span>
+                </button>
+              </div>
+            </form>
+          )}
+
+          {activeTab === 'wallet' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-200 dark:bg-dark-100 dark:border-dark-300">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                  <Wallet className="w-5 h-5 mr-2 text-green-600 dark:text-neon-green-400" />
+                  My Wallet Balance
+                </h2>
+                {loadingWallet ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-600 mr-2" />
+                    <span className="text-gray-600 dark:text-gray-300">Loading wallet...</span>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <p className="text-gray-600 dark:text-gray-300 text-lg">Current Balance</p>
+                    <p className="text-5xl font-bold text-green-600 dark:text-neon-green-400">₹{walletBalance.toFixed(2)}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Earned through referrals and bonuses</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-200 dark:bg-dark-100 dark:border-dark-300">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                  <ArrowRight className="w-5 h-5 mr-2 text-blue-600 dark:text-neon-cyan-400" />
+                  Redeem Balance
+                </h2>
+                {redeemError && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-xl mb-4 dark:bg-red-900/20 dark:border-red-500/50">
+                    <div className="flex items-start">
+                      <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 mt-0.5" />
+                      <p className="text-red-700 dark:text-red-300 text-sm font-medium">{redeemError}</p>
+                    </div>
+                  </div>
+                )}
+                {redeemSuccess && (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-xl mb-4 dark:bg-neon-cyan-500/10 dark:border-neon-cyan-400/50">
+                    <div className="flex items-start">
+                      <CheckCircle className="w-5 h-5 text-green-600 dark:text-neon-cyan-400 mr-3 mt-0.5" />
+                      <p className="text-green-700 dark:text-neon-cyan-300 text-sm font-medium">Redemption request submitted successfully!</p>
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Amount to Redeem (₹)</label>
+                    <input
+                      type="number"
+                      value={redeemAmount}
+                      onChange={(e) => setRedeemAmount(e.target.value)}
+                      className="input-base"
+                      min="100"
+                      step="1"
+                      placeholder="Minimum ₹100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Redemption Method</label>
+                    <select value={redeemMethod} onChange={(e) => setRedeemMethod(e.target.value as 'upi' | 'bank_transfer')} className="input-base">
+                      <option value="upi">UPI</option>
+                      <option value="bank_transfer">Bank Transfer</option>
+                    </select>
+                  </div>
+                  {redeemMethod === 'upi' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">UPI ID</label>
+                      <input
+                        type="text"
+                        value={redeemDetails.upiId || ''}
+                        onChange={(e) => setRedeemDetails(prev => ({ ...prev, upiId: e.target.value }))}
+                        className="input-base"
+                        placeholder="e.g., yourname@bank"
+                      />
+                    </div>
+                  )}
+                  {redeemMethod === 'bank_transfer' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Bank Account Number</label>
+                        <input
+                          type="text"
+                          value={redeemDetails.bankAccount || ''}
+                          onChange={(e) => setRedeemDetails(prev => ({ ...prev, bankAccount: e.target.value }))}
+                          className="input-base"
+                          placeholder="e.g., 1234567890"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">IFSC Code</label>
+                        <input
+                          type="text"
+                          value={redeemDetails.ifscCode || ''}
+                          onChange={(e) => setRedeemDetails(prev => ({ ...prev, ifscCode: e.target.value }))}
+                          className="input-base"
+                          placeholder="e.g., HDFC0000123"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Account Holder Name</label>
+                        <input
+                          type="text"
+                          value={redeemDetails.accountHolderName || ''}
+                          onChange={(e) => setRedeemDetails(prev => ({ ...prev, accountHolderName: e.target.value }))}
+                          className="input-base"
+                          placeholder="e.g., John Doe"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <button onClick={handleRedeem} disabled={isSubmitting || loadingWallet} className="btn-primary w-full flex items-center justify-center space-x-2">
+                    {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Wallet className="w-5 h-5" />}
+                    <span>{isSubmitting ? 'Processing...' : 'Redeem Now'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'security' && (
+            <DeviceManagement />
+          )}
+        </div>
+      </div>
+      <AlertModal
+        isOpen={showAlert}
+        onClose={() => setShowAlert(false)}
+        title={alertContent.title}
+        message={alertContent.message}
+        type={alertContent.type}
+      />
+    </div>
+  );
+};
